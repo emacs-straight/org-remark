@@ -1,0 +1,9 @@
+*/#marginalia.org#
+*.bak
+*.log
+
+*.elc
+
+test
+test*
+

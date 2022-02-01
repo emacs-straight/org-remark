@@ -6,7 +6,7 @@
 ;; URL: https://github.com/nobiot/org-remark
 ;; Version: 0.2.0
 ;; Created: 22 December 2020
-;; Last modified: 30 January 2022
+;; Last modified: 31 January 2022
 ;; Package-Requires: ((emacs "27.1") (org "9.4"))
 ;; Keywords: org-mode, annotation, writing, note-taking, marginal-notes
 
@@ -62,12 +62,6 @@
 Set to nil if you prefer for it not to."
   :type 'boolean)
 
-(defcustom org-remark-notes-file-path "marginalia.org"
-  "Define the file path to store the location of highlights and write annotations.
-The default is one file per directory.  Ensure that it is an Org
-file."
-  :type 'file)
-
 (defcustom org-remark-notes-display-buffer-action
   `((display-buffer-in-side-window)
     (side . left)
@@ -84,9 +78,22 @@ for more detail and expected elements of the list."
 name."
   :type 'string)
 
+(defcustom org-remark-source-path-function #'file-relative-name
+  "Define the function that returns the file path to the main file.
+The main (source) file is the file for which `org-remark' creates
+highlights and marginal notes.
+
+When relative path is used, it is relative from the
+`default-directory' of the source file (current buffer)."
+  :type '(choice
+          (const :tag "Relative path" file-relative-name)
+          (const :tag "Abbreviated absolute path" abbreviate-file-name)
+          (function :tag "Other function")))
+
 (defcustom org-remark-use-org-id nil
   "Define if Org-remark use Org-ID to link back to the main note."
   :type 'boolean)
+
 
 
 ;;;; Variables
@@ -96,8 +103,8 @@ name."
 It is a local variable and is a list of overlays.  Each overlay
 represents a highlighted text region.
 
-On `save-buffer' each highlight will be save in the notes file at
-`org-remark-notes-file-path'.")
+On `save-buffer' each highlight will be saved in the notes file at
+the path returned by `org-remark-notes-get-file-path'.")
 
 (defvar-local org-remark-highlights-hidden nil
   "Keep hidden/shown state of the highlights in current buffer.")
@@ -226,19 +233,14 @@ recommended to turn it on as part of Emacs initialization.
      (org-remark-mode
       ;; Activate
       (org-remark-highlights-load)
-      (add-hook 'after-save-hook #'org-remark-save nil t)
-      (add-hook 'kill-buffer-hook #'org-remark-tracking-save nil t)
-      ;; Tracking
-      (org-remark-notes-track-file (buffer-file-name)))
+      (add-hook 'after-save-hook #'org-remark-save nil t))
      (t
       ;; Deactivate
       (when org-remark-highlights
         (dolist (highlight org-remark-highlights)
           (delete-overlay highlight)))
       (setq org-remark-highlights nil)
-      (org-remark-tracking-save)
-      (remove-hook 'after-save-hook #'org-remark-save t)
-      (remove-hook 'kill-buffer-hook #'org-remark-tracking-save t))))
+      (remove-hook 'after-save-hook #'org-remark-save t))))
 
 
 ;; Org-remark Menu
@@ -324,12 +326,12 @@ This function will apply face `org-remark-highlighter' to the selected region.
 
 When this function is used interactively, it will generate a new
 ID, always assuming it is working on a new highlighted text
-region, and Org-remark will start tracking the highlight's
-location in the current buffer.
+region.
 
 A Org headline entry for the highlght will be created in the
-marginal notes file specified by `org-remark-notes-file-path'.
-If the file does not exist yet, it will be created.
+marginal notes file specified by
+`org-remark-notes-get-file-path'.  If the file does not exist
+yet, it will be created.
 
 When this function is called from Elisp, ID can be
 optionally passed, indicating to Org-remark that it is to load an
@@ -361,15 +363,9 @@ marginal notes file.  The expected values are nil, :load and
 
 (defun org-remark-save ()
   "Save all the highlights tracked in current buffer to notes file.
-Variable`org-remark-notes-file-path' defines the file path.
 
 This function is automatically called when you save the current
 buffer via `after-save-hook'.
-
-When `org-remark-global-tracking-mode' is on, this function also
-adds current buffer to variable `org-remark-files-tracked' so that
-next time you visit this file, `org-remark-mode' can be
-automatically turned on to load the highlights.
 
 `org-remark-highlights' is the local variable that tracks every highlight
 in the current buffer.  Each highlight is represented by an overlay."
@@ -381,20 +377,17 @@ in the current buffer.  Each highlight is represented by an overlay."
       (let ((beg (overlay-start h))
             (end (overlay-end h))
             (props (overlay-properties h)))
-        (org-remark-highlight-save path beg end props)))
-    ;; Tracking
-    (org-remark-notes-track-file path)))
+        (org-remark-highlight-save path beg end props)))))
 
 (defun org-remark-open (point &optional view-only)
   "Open marginal notes file for highlight at POINT.
 The marginal notes will be narrowed to the relevant headline to
 show only the highlight at point.
 
-This function creates a cloned indirect buffer of the marginal
-notes file \(`org-remark-notes-file-path'\).  You can edit
-marginal notes file as a normal Org file.  Once you have done
-editing, you can simply save and kill the buffer or keep it
-around.
+This function creates a cloned indirect buffer for the marginal
+notes file.  You can edit it as a normal Org buffer.  Once you
+have done editing, you can simply save and kill the buffer or
+keep it around.
 
 The marginal notes file gets displayed by the action defined by
 `org-remark-notes-display-buffer-action' (by default in a side
@@ -491,13 +484,13 @@ the sequence like so:
 
 (defun org-remark-toggle ()
   "Toggle showing/hiding of highlights in current buffer.
-  If you would like to hide/show the highlights in the current
-  buffer, it is recommended to use this command instead of
-  `org-remark-mode'. This command only affects the display of the
-  highlights and their locations are still kept tracked.
-  Toggling off ~org-remark-mode~ stops this tracking completely,
-  which will likely result in inconsistency between the marginal
-  notes file and the current main buffer."
+If you would like to hide/show the highlights in the current
+buffer, it is recommended to use this command instead of
+`org-remark-mode'.  This command only affects the display of the
+highlights and their locations are still kept tracked.  Toggling
+off `org-remark-mode' stops this tracking completely, which will
+likely result in inconsistency between the marginal notes file
+and the current main buffer."
   (interactive)
   (if org-remark-highlights-hidden
       (org-remark-highlights-show)
@@ -560,7 +553,7 @@ confirmation and will remove the highlight and deletes the entry
 in the marginal notes buffer.
 
 This command is identical with passing a universal argument to
-`org-remark-remove'. "
+`org-remark-remove'."
   (interactive "d")
   (org-remark-remove point :delete))
 
@@ -654,7 +647,7 @@ marginal notes file.  The expected values are nil, :load and
 :change.
 
 A Org headline entry for the highlght will be created in the
-marginal notes file specified by `org-remark-notes-file-path'.
+marginal notes file specified by `org-remark-notes-get-file-path'.
 If the file does not exist yet, it will be created.
 
 When this function is called from Elisp, ID can be optionally
@@ -753,7 +746,7 @@ source with using ORGID."
          ;; FIXME current-line - it's not always at point
          (line-num (org-current-line beg)))
     ;; TODO Want to add a check if save is applicable here.
-    (with-current-buffer (find-file-noselect org-remark-notes-file-path)
+    (with-current-buffer (find-file-noselect (org-remark-notes-get-file-path))
       ;; If it is a new empty marginalia file
       (when (featurep 'org-remark-convert-legacy) (org-remark-convert-legacy-data))
       (org-with-wide-buffer
@@ -831,7 +824,7 @@ Return t if an entry is removed or deleted."
                             ;; This does not display the location correctly
                             (display-buffer ibuf
                                             org-remark-notes-display-buffer-action)
-                            (y-or-n-p "Highlight removed but notes exist. \
+                            (y-or-n-p "Highlight removed but notes exist.  \
 Do you really want to delete the notes?"))
                         ;; If there is no content, it's OK
                         t))
@@ -852,7 +845,7 @@ only one of the marginal notes buffer per session."
   ;; Compare the target marginal notes buffer and current marginal notes buffer.
   ;; The latter needs to be transcluded to the base buffer of an indirect
   ;; buffer.
-  (let ((cbuf (find-file-noselect org-remark-notes-file-path))
+  (let ((cbuf (find-file-noselect (org-remark-notes-get-file-path)))
         (ibuf (when (buffer-live-p org-remark-last-notes-buffer)
                 org-remark-last-notes-buffer)))
     (unless (eq (buffer-base-buffer ibuf) cbuf)
@@ -892,14 +885,6 @@ drawer."
         (org-set-property p v))))
   t)
 
-(defun org-remark-notes-track-file (path)
-  "Add PATH to `org-remark-files-tracked' when relevant.
-It works only when `org-remark-global-tracking-mode' is on.  For
-the global tracking purpose, the path must be an absolute path."
-  (when org-remark-global-tracking-mode
-    (add-to-list 'org-remark-files-tracked
-                 (abbreviate-file-name path))))
-
 
 ;;;;; org-remark-highlights
 ;;    Work on all the highlights in the current buffer
@@ -927,10 +912,11 @@ load the highlights"
         (funcall fn beg end id :load)))))
 
 (defun org-remark-highlights-get ()
-  "Return a list of highlights from `org-remark-notes-file-path'.
+  "Return a list of highlights from the marginal notes file path.
+The file path is returned by `org-remark-notes-get-file-path'.
 Each highlight is a list in the following structure:
     (id (beg . end) label)"
-  (when-let ((notes-buf (find-file-noselect org-remark-notes-file-path))
+  (when-let ((notes-buf (find-file-noselect (org-remark-notes-get-file-path)))
              (source-path (org-remark-source-path (buffer-file-name))))
     ;; TODO check if there is any relevant notes for the current file
     ;; This can be used for adding icon to the highlight
@@ -1069,15 +1055,7 @@ Case 2. The overlay points to no buffer
 Returns the standardized path.  Currently, it's only a place
 holder and uses `abbreviate-file-name' to return an absolute
 path."
-  ;; TODO
-  ;; A place holder for enhancemnet after the release of v1.0.0
-  ;; Potentially support relative path.
-  ;; No capacity to test this properly at the moment.
-  ;;
-  ;; (if org-remark-notes-relative-directory
-  ;;     (funcall org-remark-notes-path-function path org-remark-notes-relative-directory)
-  ;;   (funcall org-remark-notes-path-function path)))
-  (abbreviate-file-name path))
+  (funcall org-remark-source-path-function path))
 
 (defun org-remark-region-or-word ()
   "Return beg and end of the active region or of the word at point.

@@ -5,7 +5,7 @@
 ;; Author: Noboru Ota <me@nobiot.com>
 ;; URL: https://github.com/nobiot/org-remark
 ;; Created: 15 August 2021
-;; Last modified: 31 January 2022
+;; Last modified: 01 February 2022
 ;; Package-Requires: ((emacs "27.1") (org "9.4"))
 ;; Keywords: org-mode, annotation, writing, note-taking, marginal notes
 
@@ -44,6 +44,7 @@ If it is a function, the default function is
 like this: \"FILE-notes.org\" by adding \"-notes.org\" as a
 suffix to the file name without the extension."
   :group 'org-remark
+  :safe #'stringp
   :type '(choice
           (file "marginalia.org")
           (function org-remark-notes-file-path-function)))
@@ -84,10 +85,9 @@ This function looks at customization variable
 `org-remark-notes-file-path'.  If it is a string, return it as
 the file path.  If it is a function, evaluate it to return the
 value."
-  (if-let ((fn (when (functionp org-remark-notes-file-path)
-                 org-remark-notes-file-path)))
-      (funcall fn)
-    ;; If not funciton, assume string and return it as the file path
+  (if (functionp org-remark-notes-file-path)
+      (funcall org-remark-notes-file-path)
+    ;; If not function, assume string and return it as the file path.
     org-remark-notes-file-path))
 
 (defun org-remark-notes-file-path-function ()

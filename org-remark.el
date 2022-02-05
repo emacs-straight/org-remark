@@ -6,7 +6,7 @@
 ;; URL: https://github.com/nobiot/org-remark
 ;; Version: 0.2.0
 ;; Created: 22 December 2020
-;; Last modified: 01 February 2022
+;; Last modified: 04 February 2022
 ;; Package-Requires: ((emacs "27.1") (org "9.4"))
 ;; Keywords: org-mode, annotation, writing, note-taking, marginal-notes
 
@@ -743,11 +743,9 @@ source with using ORGID."
          (id (plist-get props 'org-remark-id))
          (text (org-with-wide-buffer (buffer-substring-no-properties beg end)))
          (orgid (org-remark-highlight-get-org-id beg))
-         ;; FIXME current-line - it's not always at point
+         (notes-buf (find-file-noselect (org-remark-notes-get-file-path)))
          (line-num (org-current-line beg)))
-    ;; TODO Want to add a check if save is applicable here.
-    (with-current-buffer (find-file-noselect (org-remark-notes-get-file-path))
-      ;; If it is a new empty marginalia file
+    (with-current-buffer notes-buf
       (when (featurep 'org-remark-convert-legacy) (org-remark-convert-legacy-data))
       (org-with-wide-buffer
        (let ((file-headline (or (org-find-property
@@ -789,7 +787,15 @@ source with using ORGID."
            (org-remark-notes-set-properties beg end props)
            (when (and orgid org-remark-use-org-id)
                (insert (concat "[[id:" orgid "]" "[" title "]]"))))))
-      (when (buffer-modified-p) (save-buffer))
+      (cond
+       ;; fix GH issue #19
+       ;; Temporarily remove `org-remark-save' from the `after-save-hook'
+       ;; When the marginal notes buffer is the current buffer
+       ((eq notes-buf (current-buffer))(progn
+                                         (remove-hook 'after-save-hook #'org-remark-save t)
+                                         (save-buffer)
+                                         (add-hook 'after-save-hook #'org-remark-save nil t))
+        (buffer-modified-p)(save-buffer)))
       t)))
 
 
@@ -916,7 +922,7 @@ load the highlights"
   "Return a list of highlights from the marginal notes file path.
 The file path is returned by `org-remark-notes-get-file-path'.
 Each highlight is a list in the following structure:
-    (id (beg . end) label)"
+    (ID (BEG . END) LABEL)"
   (when-let ((notes-buf (find-file-noselect (org-remark-notes-get-file-path)))
              (source-path (org-remark-source-path (buffer-file-name))))
     ;; TODO check if there is any relevant notes for the current file
@@ -1050,12 +1056,9 @@ Case 2. The overlay points to no buffer
 
 
 ;;;;; Other utilities
-
 (defun org-remark-source-path (path)
-  "Covert PATH either to absolute or relative for marginal notes files.
-Returns the standardized path.  Currently, it's only a place
-holder and uses `abbreviate-file-name' to return an absolute
-path."
+  "Convert PATH either to absolute or relative for marginal notes files.
+Returns the standardized path."
   (funcall org-remark-source-path-function path))
 
 (defun org-remark-region-or-word ()
@@ -1083,5 +1086,5 @@ function extends the behavior and looks for the word at point"
 ;;; org-remark.el ends here
 
 ;; Local Variables:
-;; eval: (setq-local org-remark-notes-file-path "README.org")
+;; org-remark-notes-file-path: "README.org"
 ;; End:

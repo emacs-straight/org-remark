@@ -6,7 +6,7 @@
 ;; URL: https://github.com/nobiot/org-remark
 ;; Version: 1.0.5
 ;; Created: 22 December 2020
-;; Last modified: 14 December 2022
+;; Last modified: 23 December 2022
 ;; Package-Requires: ((emacs "27.1") (org "9.4"))
 ;; Keywords: org-mode, annotation, note-taking, marginal-notes, wp,
 
@@ -366,16 +366,16 @@ marginal notes file.  The expected values are nil, :load and
   ;; This will do for now
   (org-remark-highlight-mark beg end id mode
                              nil nil
-                             (list "org-remark-label" "nil")))
+                             (list 'org-remark-label "nil")))
 
 (when org-remark-create-default-pen-set
   ;; Create default pen set.
   (org-remark-create "red-line"
-                     '(:underline (:color "dark red" :style wave))
-                     '(CATEGORY "review" help-echo "Review this"))
+                     `(:underline (:color "dark red" :style wave))
+                     `(CATEGORY "review" help-echo "Review this"))
   (org-remark-create "yellow"
-                     '(:underline "gold" :background "lemon chiffon")
-                     '(CATEGORY "important")))
+                     `(:underline "gold" :background "lemon chiffon")
+                     `(CATEGORY "important")))
 
 (defun org-remark-save ()
   "Save all the highlights tracked in current buffer to notes file.
@@ -773,7 +773,12 @@ source with using ORGID."
          (notes-buf (find-file-noselect (org-remark-notes-get-file-name)))
          (main-buf (current-buffer))
          (line-num (org-current-line beg))
-         (orgid (org-remark-highlight-get-org-id beg)))
+         (orgid (org-remark-highlight-get-org-id beg))
+         (link (if buffer-file-name
+                   (concat "[[file:" filename
+                           (when line-num (format "::%d" line-num)) "]]")
+                 (run-hook-with-args-until-success
+                  'org-remark-highlight-link-to-source-functions filename))))
     (with-current-buffer notes-buf
       (when (featurep 'org-remark-convert-legacy) (org-remark-convert-legacy-data))
       ;;`org-with-wide-buffer is a macro that should work for non-Org file'
@@ -790,11 +795,7 @@ source with using ORGID."
                                   (org-up-heading-safe) (point))))
              (id-headline (org-find-property org-remark-prop-id id)))
          ;; Add org-remark-link with updated line-num as a property
-         (plist-put props "org-remark-link" (concat
-                                             "[[file:"
-                                             filename
-                                             (when line-num (format "::%d" line-num))
-                                             "]]"))
+         (when link (plist-put props "org-remark-link" link))
          (if id-headline
              (progn
                (goto-char id-headline)
@@ -1076,6 +1077,11 @@ Case 1. Both start and end of an overlay are identical
         This should not happen when you manually mark a text
         region.  A typical cause of this case is when you delete a
         region that contains a highlight overlay.
+
+        This also happens when EWW reloads the buffer or
+        re-renders any part of the buffer.  This is because it
+        removes overlays on re-render by calling
+        `remove-overlays'.
 
 Case 2. The overlay points to no buffer
 

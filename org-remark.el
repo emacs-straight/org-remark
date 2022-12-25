@@ -6,7 +6,7 @@
 ;; URL: https://github.com/nobiot/org-remark
 ;; Version: 1.0.5
 ;; Created: 22 December 2020
-;; Last modified: 23 December 2022
+;; Last modified: 24 December 2022
 ;; Package-Requires: ((emacs "27.1") (org "9.4"))
 ;; Keywords: org-mode, annotation, note-taking, marginal-notes, wp,
 
@@ -167,7 +167,7 @@ property names with \"org-remark-\" or use \"CATEGORY\"."
     `(progn
        ;; Define custom pen function
        (defun ,(intern (format "org-remark-mark-%s" label))
-           (beg end &optional id mode)
+           (beg end &optional id mode text)
          ,(format "Apply the following face to the region selected by BEG and END.
 
 %s
@@ -184,10 +184,16 @@ location in the current buffer.
 
 When this function is called from Elisp, ID can be optionally
 passed, indicating to Org-remark that it is an existing
-highlight.  In this case, no new ID gets generated."
+highlight.  In this case, no new ID gets generated.
+
+When the pen itself defines the help-echo property, it will have
+the priority over the excerpt of the marginal notes."
                   (or face "`org-remark-highlighter'") properties)
          (interactive (org-remark-region-or-word))
-         (org-remark-highlight-mark beg end id mode ,label ,face ,properties))
+         (let ((properties ,properties))
+           (unless (member 'help-echo properties)
+             (setq properties (append properties (list 'help-echo text))))
+           (org-remark-highlight-mark beg end id mode ,label ,face properties)))
 
        ;; Register to `org-remark-available-pens'
        (add-to-list 'org-remark-available-pens
@@ -338,7 +344,7 @@ recommended to turn it on as part of Emacs initialization.
 
 (add-to-list 'org-remark-available-pens #'org-remark-mark)
 ;;;###autoload
-(defun org-remark-mark (beg end &optional id mode)
+(defun org-remark-mark (beg end &optional id mode text)
   "Apply face `org-remark-highlighter' to the region between BEG and END.
 
 When this function is used interactively, it will generate a new
@@ -359,14 +365,18 @@ back to the database.
 MODE is also an argument which can be passed from Elisp.  It
 determines whether or not highlight is to be saved in the
 marginal notes file.  The expected values are nil, :load and
-:change."
+:change.
+
+TEXT is an excerpt of the body text of the marginal note (for
+:load and :change modes only)."
   (interactive (org-remark-region-or-word))
   ;; FIXME
   ;; Adding "nil" is different to removing a prop
   ;; This will do for now
   (org-remark-highlight-mark beg end id mode
                              nil nil
-                             (list 'org-remark-label "nil")))
+                             (list 'org-remark-label "nil"
+                                   'help-echo text)))
 
 (when org-remark-create-default-pen-set
   ;; Create default pen set.
@@ -390,9 +400,9 @@ in the current buffer.  Each highlight is an overlay."
   (org-remark-highlights-sort)
   (let ((filename (org-remark-source-find-file-name)))
     (dolist (h org-remark-highlights)
-      (let ((beg (overlay-start h))
-            (end (overlay-end h))
-            (props (overlay-properties h)))
+      (let* ((beg (overlay-start h))
+             (end (overlay-end h))
+             (props (overlay-properties h)))
         (org-remark-highlight-save filename beg end props)))))
 
 (defun org-remark-open (point &optional view-only)
@@ -524,11 +534,12 @@ from."
               (id (overlay-get ov 'org-remark-id))
               (beg (overlay-start ov))
               (end (overlay-end ov)))
-    (let ((new-pen (if pen pen
+    (let* ((text (overlay-get ov 'help-echo))
+           (new-pen (if pen pen
                      (intern
                       (completing-read "Which pen?:" org-remark-available-pens)))))
       (delete-overlay ov)
-      (funcall new-pen beg end id :change))))
+      (funcall new-pen beg end id :change text))))
 
 (defun org-remark-remove (point &optional delete)
   "Remove the highlight at POINT.
@@ -729,6 +740,24 @@ This function does this only when `org-remark-use-org-id' is
 non-nil.  Returns nil otherwise, or when no Org-ID is found."
   (and org-remark-use-org-id
        (org-entry-get point "ID" :inherit)))
+
+(defun org-remark-highlight-get-text ()
+  "Return the text body of a highlight in the notes buffer."
+  (let ((full-text
+         (save-excursion
+           (org-end-of-meta-data :full)
+           (if
+               ;; handle empty annotation
+               ;; (org-end-of-meta-data :full) took us to next org heading):
+               (or (looking-at org-heading-regexp)
+                   (eobp)) ;; end of buffer
+               "[empty entry]"
+             (buffer-substring-no-properties
+              (point)
+              (org-end-of-subtree))))))
+    (if (< 200 (length full-text))
+        (substring-no-properties full-text 0 200)
+      full-text)))
 
 (defun org-remark-highlight-save (filename beg end props &optional title)
   "Save a single HIGHLIGHT in the marginal notes file.
@@ -947,16 +976,17 @@ load the highlights"
     (let ((id (car highlight))
           (beg (caadr highlight))
           (end (cdadr highlight))
-          (label (caddr highlight)))
+          (label (caddr highlight))
+          (text (cadddr highlight)))
       (let ((fn (intern (concat "org-remark-mark-" label))))
         (unless (functionp fn) (setq fn #'org-remark-mark))
-        (funcall fn beg end id :load)))))
+        (funcall fn beg end id :load text)))))
 
 (defun org-remark-highlights-get ()
   "Return a list of highlights from the marginal notes file.
 The file name is returned by `org-remark-notes-get-file-name'.
 Each highlight is a list in the following structure:
-    (ID (BEG . END) LABEL)"
+    (ID (BEG . END) LABEL TEXT)"
   ;; Set source-file-name first, as `find-file-noselect' will set the
   ;; current-buffer to source-file-name. Issue #39 FIXME: A way to make
   ;; this sequence agnostic is preferred, if there is a function that
@@ -991,10 +1021,12 @@ Each highlight is a list in the following structure:
                                                org-remark-prop-source-beg)))
                           (end (string-to-number
                                 (org-entry-get (point)
-                                               org-remark-prop-source-end))))
+                                               org-remark-prop-source-end)))
+                          (text (org-remark-highlight-get-text)))
                  (push (list id
                              (cons beg end)
-                             (org-entry-get (point) "org-remark-label"))
+                             (org-entry-get (point) "org-remark-label")
+                             text)
                        highlights))))
            highlights))))))
 

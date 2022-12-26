@@ -6,7 +6,7 @@
 ;; URL: https://github.com/nobiot/org-remark
 ;; Version: 1.0.5
 ;; Created: 22 December 2020
-;; Last modified: 24 December 2022
+;; Last modified: 25 December 2022
 ;; Package-Requires: ((emacs "27.1") (org "9.4"))
 ;; Keywords: org-mode, annotation, note-taking, marginal-notes, wp,
 
@@ -167,7 +167,7 @@ property names with \"org-remark-\" or use \"CATEGORY\"."
     `(progn
        ;; Define custom pen function
        (defun ,(intern (format "org-remark-mark-%s" label))
-           (beg end &optional id mode text)
+           (beg end &optional id mode)
          ,(format "Apply the following face to the region selected by BEG and END.
 
 %s
@@ -190,10 +190,7 @@ When the pen itself defines the help-echo property, it will have
 the priority over the excerpt of the marginal notes."
                   (or face "`org-remark-highlighter'") properties)
          (interactive (org-remark-region-or-word))
-         (let ((properties ,properties))
-           (unless (member 'help-echo properties)
-             (setq properties (append properties (list 'help-echo text))))
-           (org-remark-highlight-mark beg end id mode ,label ,face properties)))
+         (org-remark-highlight-mark beg end id mode ,label ,face ,properties))
 
        ;; Register to `org-remark-available-pens'
        (add-to-list 'org-remark-available-pens
@@ -344,7 +341,7 @@ recommended to turn it on as part of Emacs initialization.
 
 (add-to-list 'org-remark-available-pens #'org-remark-mark)
 ;;;###autoload
-(defun org-remark-mark (beg end &optional id mode text)
+(defun org-remark-mark (beg end &optional id mode)
   "Apply face `org-remark-highlighter' to the region between BEG and END.
 
 When this function is used interactively, it will generate a new
@@ -365,18 +362,14 @@ back to the database.
 MODE is also an argument which can be passed from Elisp.  It
 determines whether or not highlight is to be saved in the
 marginal notes file.  The expected values are nil, :load and
-:change.
-
-TEXT is an excerpt of the body text of the marginal note (for
-:load and :change modes only)."
+:change."
   (interactive (org-remark-region-or-word))
   ;; FIXME
   ;; Adding "nil" is different to removing a prop
   ;; This will do for now
   (org-remark-highlight-mark beg end id mode
                              nil nil
-                             (list 'org-remark-label "nil"
-                                   'help-echo text)))
+                             (list 'org-remark-label "nil")))
 
 (when org-remark-create-default-pen-set
   ;; Create default pen set.
@@ -534,12 +527,11 @@ from."
               (id (overlay-get ov 'org-remark-id))
               (beg (overlay-start ov))
               (end (overlay-end ov)))
-    (let* ((text (overlay-get ov 'help-echo))
-           (new-pen (if pen pen
+    (let ((new-pen (if pen pen
                      (intern
                       (completing-read "Which pen?:" org-remark-available-pens)))))
       (delete-overlay ov)
-      (funcall new-pen beg end id :change text))))
+      (funcall new-pen beg end id :change))))
 
 (defun org-remark-remove (point &optional delete)
   "Remove the highlight at POINT.
@@ -692,7 +684,8 @@ to the database."
   (org-with-wide-buffer
    (let ((ov (make-overlay beg end nil :front-advance))
          ;; UUID is too long; does not have to be the full length
-         (id (if id id (substring (org-id-uuid) 0 8))))
+         (id (if id id (substring (org-id-uuid) 0 8)))
+         (notes-props))
      (overlay-put ov 'face (if face face 'org-remark-highlighter))
      (while properties
        (let ((prop (pop properties))
@@ -706,14 +699,23 @@ to the database."
      (push ov org-remark-highlights)
      ;; for mode, nil and :change result in saving the highlight.  :load
      ;; bypasses save.
-     (unless (eq mode :load)
-       (let ((filename (org-remark-source-find-file-name)))
+     (let ((filename (org-remark-source-find-file-name)))
+       (unless (eq mode :load)
          (if filename
-             (org-remark-highlight-save filename
-                                        beg end
-                                        (overlay-properties ov)
-                                        (org-remark-highlight-get-title))
-           (message "org-remark: Highlights not saved; buffer is not visiting a file"))))))
+             (setq notes-props
+                   (org-remark-highlight-save filename
+                                              beg end
+                                              (overlay-properties ov)
+                                              (org-remark-highlight-get-title)))
+              ;;; Get props for create and change any way
+           ;; TODO remove this message; non-file-visiting buffers is now supported.
+           (message "org-remark: Highlights not saved; buffer is not visiting a file"))
+         (when notes-props
+           ;; TODO. The function should be based on parameters
+           (unless (overlay-get ov 'help-echo)
+             (overlay-put ov 'help-echo (plist-get notes-props :body)))
+           (overlay-put ov 'org-remark-note-body
+                        (plist-get notes-props :body)))))))
   (deactivate-mark)
   (org-remark-highlights-housekeep)
   (org-remark-highlights-sort))
@@ -762,7 +764,7 @@ non-nil.  Returns nil otherwise, or when no Org-ID is found."
 (defun org-remark-highlight-save (filename beg end props &optional title)
   "Save a single HIGHLIGHT in the marginal notes file.
 
-Return t.
+Return the highlight's data properties list (TODO refer to ...).
 
 FILENAME specifies the name of source file with which the marginal notes
 file is associated.
@@ -807,7 +809,8 @@ source with using ORGID."
                    (concat "[[file:" filename
                            (when line-num (format "::%d" line-num)) "]]")
                  (run-hook-with-args-until-success
-                  'org-remark-highlight-link-to-source-functions filename))))
+                  'org-remark-highlight-link-to-source-functions filename)))
+         (notes-props))
     (with-current-buffer notes-buf
       (when (featurep 'org-remark-convert-legacy) (org-remark-convert-legacy-data))
       ;;`org-with-wide-buffer is a macro that should work for non-Org file'
@@ -846,7 +849,8 @@ source with using ORGID."
            (insert (concat "** " text "\n"))
            (org-remark-notes-set-properties beg end props)
            (when (and orgid org-remark-use-org-id)
-               (insert (concat "[[id:" orgid "]" "[" title "]]"))))))
+             (insert (concat "[[id:" orgid "]" "[" title "]]"))))
+         (setq notes-props (list :body (org-remark-highlight-get-text)))))
       (cond
        ;; fix GH issue #19
        ;; Temporarily remove `org-remark-save' from the `after-save-hook'
@@ -859,7 +863,7 @@ source with using ORGID."
        ;; notes buffer
        ((buffer-modified-p)
         (save-buffer)))
-      t)))
+      notes-props)))
 
 
 ;;;;; org-remark-notes
@@ -973,20 +977,30 @@ Otherwise, do not forget to turn on `org-remark-mode' manually to
 load the highlights"
   ;; Loop highlights and add them to the current buffer
   (dolist (highlight (org-remark-highlights-get))
-    (let ((id (car highlight))
-          (beg (caadr highlight))
-          (end (cdadr highlight))
-          (label (caddr highlight))
-          (text (cadddr highlight)))
+    (let* ((id (plist-get highlight :id))
+           (location (plist-get highlight :location))
+           (beg (car location))
+           (end (cdr location))
+           (label (plist-get highlight :label))
+           (props (plist-get highlight :props)))
       (let ((fn (intern (concat "org-remark-mark-" label))))
         (unless (functionp fn) (setq fn #'org-remark-mark))
-        (funcall fn beg end id :load text)))))
+        (funcall fn beg end id :load)
+        ;; TODO Generalize the part that updates properties.
+        ;; :body should not be the fixed property.
+        ;; '(:text (val . fn) :prop1 (val . fn) :prop2 (val .fn))
+        ;; (dolist list)
+        (let ((ov (org-remark-find-overlay-at-point beg)))
+          (unless (overlay-get ov 'help-echo)
+            (overlay-put ov 'help-echo (plist-get props :body)))
+          (overlay-put ov 'org-remark-note-body
+                       (plist-get props :body)))))))
 
 (defun org-remark-highlights-get ()
   "Return a list of highlights from the marginal notes file.
 The file name is returned by `org-remark-notes-get-file-name'.
-Each highlight is a list in the following structure:
-    (ID (BEG . END) LABEL TEXT)"
+Each highlight is a property list in the following properties:
+    (:id ID :location (BEG . END) :label LABEL :props '(PROPERTIES)"
   ;; Set source-file-name first, as `find-file-noselect' will set the
   ;; current-buffer to source-file-name. Issue #39 FIXME: A way to make
   ;; this sequence agnostic is preferred, if there is a function that
@@ -1023,10 +1037,10 @@ Each highlight is a list in the following structure:
                                 (org-entry-get (point)
                                                org-remark-prop-source-end)))
                           (text (org-remark-highlight-get-text)))
-                 (push (list id
-                             (cons beg end)
-                             (org-entry-get (point) "org-remark-label")
-                             text)
+                 (push (list :id id
+                             :location (cons beg end)
+                             :label    (org-entry-get (point) "org-remark-label")
+                             :props    (list :body text))
                        highlights))))
            highlights))))))
 

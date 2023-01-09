@@ -382,11 +382,11 @@ marginal notes file.  The expected values are nil, :load and
 (when org-remark-create-default-pen-set
   ;; Create default pen set.
   (org-remark-create "red-line"
-                     `(:underline (:color "dark red" :style wave))
-                     `(CATEGORY "review" help-echo "Review this"))
+                     '(:underline (:color "dark red" :style wave))
+                     '(CATEGORY "review" help-echo "Review this"))
   (org-remark-create "yellow"
-                     `(:underline "gold" :background "lemon chiffon")
-                     `(CATEGORY "important")))
+                     '(:inherit default :underline "gold2")
+                     '(CATEGORY "important")))
 
 (defun org-remark-save ()
   "Save all the highlights tracked in current buffer to notes file.
@@ -1306,7 +1306,12 @@ function extends the behavior and looks for the word at point"
     ;; Check beg end is required as the cursor may be on an empty point with no
     ;; word under it.
     (if (and beg end)
-        (list beg end)
+        (progn
+          (when (> beg end)
+            (let ((large beg))
+              (setq beg end
+                    end large)))
+          (list beg end))
       (user-error "No region selected and the cursor is not on a word"))))
 
 

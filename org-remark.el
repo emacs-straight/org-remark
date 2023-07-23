@@ -6,7 +6,7 @@
 ;; URL: https://github.com/nobiot/org-remark
 ;; Version: 1.1.0
 ;; Created: 22 December 2020
-;; Last modified: 20 May 2023
+;; Last modified: 17 July 2023
 ;; Package-Requires: ((emacs "27.1") (org "9.4"))
 ;; Keywords: org-mode, annotation, note-taking, marginal-notes, wp,
 
@@ -57,6 +57,18 @@
     (t
      :inherit highlight))
   "Face for the default highlighter pen.")
+
+(defface org-remark-highlighter-warning
+  '((((class color) (min-colors 88) (background light))
+     :foreground "#604000" :background "#fff29a")
+    (((class color) (min-colors 88) (background dark))
+     :foreground: "#e2d980" :background "#693200")
+    (t
+     :inherit warning))
+  "Face for highlighter warning.
+For example, it is used by the characters that indicate the
+location of the highlight has been automatically adjusted from its
+original.")
 
 (defcustom org-remark-create-default-pen-set t
   "When non-nil, Org-remark creates default pen set.
@@ -110,9 +122,30 @@ Org-remark does not create this ID, which needs to be added
 manually or some other function to either the headline or file."
   :type 'boolean)
 
-(defcustom  org-remark-open-hook nil
+(defcustom org-remark-open-hook nil
   "Hook run when a note buffer is opened/visited.
 The current buffer is the note buffer."
+  :type 'hook)
+
+(defcustom org-remark-icon-notes "(*)"
+  "String to be displayed when notes exist for a given highlight.
+Nil means no icon is to be displayed."
+  :type 'string)
+
+(defcustom org-remark-icon-position-adjusted "(d)"
+  "String to be displayed when a highlight position adjusted.
+Nil means no icon is to be displayed."
+  :type 'string)
+
+
+(defcustom org-remark-highlights-after-load-functions
+  '(org-remark-highlights-adjust-positions org-remark-highlights-add-icons)
+  "Abnormal hook run after `org-remark-highlights-load'.
+It is run with OVERLAYS and NOTES-BUF as arguments. OVERLAYS are
+highlights. It is run with the source buffer as current buffer.
+
+Add-icons should be the last function because other functions may
+do something relevant for an icon -- e.g. adjust-positon."
   :type 'hook)
 
 
@@ -269,14 +302,18 @@ recommended to turn it on as part of Emacs initialization.
      (org-remark-mode
       ;; Activate
       (org-remark-highlights-load)
-      (add-hook 'after-save-hook #'org-remark-save nil t))
+      (add-hook 'after-save-hook #'org-remark-save nil t)
+      (add-hook 'org-remark-highlight-link-to-source-functions
+                #'org-remark-highlight-link-to-source-default 80))
      (t
       ;; Deactivate
       (when org-remark-highlights
         (dolist (highlight org-remark-highlights)
           (delete-overlay highlight)))
       (setq org-remark-highlights nil)
-      (remove-hook 'after-save-hook #'org-remark-save t))))
+      (remove-hook 'after-save-hook #'org-remark-save t)
+      (remove-hook 'org-remark-highlight-link-to-source-functions
+                   #'org-remark-highlight-link-to-source-default))))
 
 
 ;;;; Org-remark Menu
@@ -409,13 +446,9 @@ in the current buffer.  Each highlight is an overlay."
   (org-remark-highlights-housekeep)
   (org-remark-highlights-sort)
   (let ((notes-buf (find-file-noselect (org-remark-notes-get-file-name)))
-        (source-buf (or (buffer-base-buffer) (current-buffer)))
-        (filename (org-remark-source-find-file-name)))
+        (source-buf (or (buffer-base-buffer) (current-buffer))))
     (dolist (h org-remark-highlights)
-      (let* ((beg (overlay-start h))
-             (end (overlay-end h))
-             (props (overlay-properties h)))
-        (org-remark-highlight-save filename beg end props)))
+      (org-remark-highlight-add h source-buf notes-buf))
     ;;; Avoid saving the notes buffer if it is the same as the source buffer
     (if (eq source-buf notes-buf)
         (set-buffer-modified-p nil)
@@ -734,8 +767,7 @@ round-trip back to the notes file."
   (let ((ov (make-overlay beg end nil :front-advance))
         ;; UUID is too long; does not have to be the full length
         (id (if id id (substring (org-id-uuid) 0 8)))
-        (filename (org-remark-source-find-file-name))
-        (notes-props))
+        (filename (org-remark-source-find-file-name)))
     (if (not filename)
         (message (format "org-remark: Highlights not saved.\
  This buffer (%s) is not supported" (symbol-name major-mode)))
@@ -754,19 +786,15 @@ round-trip back to the notes file."
        ;; for mode, nil and :change result in saving the highlight.  :load
        ;; bypasses save.
        (unless (eq mode :load)
-         ;; Get props for create and change
-         (setq notes-props
-               (org-remark-highlight-save filename
-                                          beg end
-                                          (overlay-properties ov)
-                                          (org-remark-highlight-get-title)))
-         (when notes-props
-           (unless (overlay-get ov 'help-echo)
-             (overlay-put ov 'help-echo (plist-get notes-props :body)))
-           (overlay-put ov '*org-remark-note-body
-                        (plist-get notes-props :body)))
-         ;; Save the notes buffer when not loading
-         (let ((notes-buf (find-file-noselect (org-remark-notes-get-file-name))))
+         (let* ((notes-buf (find-file-noselect
+                            (org-remark-notes-get-file-name)))
+                (source-buf (current-buffer))
+                ;; Get props for create and change modes
+                (notes-props
+                 (org-remark-highlight-add ov source-buf notes-buf)))
+           (when notes-props
+             (org-remark-highlight-put-props ov notes-props))
+           ;; Save the notes buffer when not loading
            (unless (eq notes-buf (current-buffer))
              (with-current-buffer notes-buf (save-buffer))))))
       (deactivate-mark)
@@ -809,8 +837,30 @@ This function assumes the current buffer is the source buffer."
   (and org-remark-use-org-id
        (org-entry-get point "ID" :inherit)))
 
-(defun org-remark-highlight-save (filename beg end props &optional title)
-  "Save a single HIGHLIGHT in the marginal notes file.
+(define-obsolete-function-alias #'org-remark-highlight-save #'org-remark-highlight-add "1.2.0"
+  "Save a single HIGHLIGHT in the marginal notes file. We no longer
+save the notes file to disk; hence the name change")
+
+(cl-defgeneric org-remark-highlight-get-constructors ()
+  "Construct lists for creating MAJOR-MODE specific hierarchy.
+
+This is the default one. Return the value in a alist like this:
+
+   (SOURCE-FILENAME-FN TITLE-FN PROP-TO-FIND)"
+  (let* ((headline-1 (list
+                      ;; SOURCE-FILENAME-FN
+                      (lambda ()
+                        (org-remark-source-get-file-name
+                         (org-remark-source-find-file-name)))
+                      ;; TITLE-FN
+                      #'org-remark-highlight-get-title
+                      ;; PROP-TO-FIND
+                      org-remark-prop-source-file))
+         (headline-constructors (list headline-1)))
+    headline-constructors))
+
+(defun org-remark-highlight-add (overlay source-buf notes-buf)
+  "Add a single HIGHLIGHT in the marginal notes file.
 
 Return the highlight's data properties list (TODO refer to ...).
 
@@ -819,12 +869,11 @@ buffer is associated.  When the source buffer does not visit a
 file (e.g. a website), it is the source buffer's file name
 equivalent, such as the URL.
 
-BEG and END are the range of the highlight being saved.  It
-is the highlight overlay's start and end.
+OVERLAY is the highlight being saved.
 
-PROPS are the highlight overlay's properties.  Not all the
-properties will be added as headline properties.  Refer to
-`org-remark-notes-set-properties'.
+SOURCE-BUF is the buffer of the source.
+
+NOTES-BUF is the notes buffer for the source.
 
 For the first highlight of the source buffer, this function will
 create a new H1 headline for it at the bottom of the marginal
@@ -856,69 +905,140 @@ source with using ORGID.
 When the current source buffer is not set up for sync with notes,
 this function calls `org-remark-notes-setup' to prepare the notes
 buffer for automatic sync."
-  (let* ((filename (org-remark-source-get-file-name filename))
-         (id (plist-get props 'org-remark-id))
-         (text (org-with-wide-buffer
-                (replace-regexp-in-string
-                 "\n" " "
-                 (buffer-substring-no-properties beg end))))
-         (notes-buf (find-file-noselect (org-remark-notes-get-file-name)))
-         (source-buf (current-buffer))
-         (line-num (org-current-line beg))
-         (orgid (org-remark-highlight-get-org-id beg))
-         (link (if buffer-file-name
-                   (concat "[[file:" filename
-                           (when line-num (format "::%d" line-num)) "]]")
-                 (run-hook-with-args-until-success
-                  'org-remark-highlight-link-to-source-functions filename)))
-         (notes-props))
-    ;;; Set up notes buffer for sync for the source buffer
-    (unless org-remark-source-setup-done
-      (org-remark-notes-setup notes-buf source-buf))
+  (let ((notes-props nil)
+        ;; Does this have to be explicitly in with-current buffer clause?
+        (headline-constructors (with-current-buffer source-buf
+                                 (org-remark-highlight-get-constructors))))
     (with-current-buffer notes-buf
-      (when (featurep 'org-remark-convert-legacy) (org-remark-convert-legacy-data))
-      ;;`org-with-wide-buffer' is a macro that should work for non-Org file
       (org-with-wide-buffer
-       (let ((file-headline
-              (or (org-find-property
-                   org-remark-prop-source-file filename)
-                  (progn
-                    ;; If file-headline does not exist, create one at the bottom
-                    (goto-char (point-max))
-                    ;; Ensure to be in the beginning of line to add a new headline
-                    (when (eolp) (open-line 1) (forward-line 1) (beginning-of-line))
-                    (insert (concat "* " title "\n"))
-                    (org-set-property org-remark-prop-source-file filename)
-                    (org-up-heading-safe) (point))))
-             (id-headline (org-find-property org-remark-prop-id id)))
-         ;; Add org-remark-link with updated line-num as a property
-         (when link (plist-put props "org-remark-link" link))
-         (if id-headline
-             (progn
-               (goto-char id-headline)
-               ;; Update the existing headline and position properties
-               ;; Don't update the headline text when it already exists
-               ;; Let the user decide how to manage the headlines
-               ;; (org-edit-headline text)
-               (org-remark-notes-set-properties beg end props))
-           ;; No headline with the marginal notes ID property. Create a new one
-           ;; at the end of the file's entry
-           (goto-char file-headline)
-           (org-narrow-to-subtree)
-           (goto-char (point-max))
-           ;; Ensure to be in the beginning of line to add a new headline
-           (when (eolp) (open-line 1) (forward-line 1) (beginning-of-line))
-           ;; Create a headline
-           ;; Add a properties
-           (insert (concat "** " text "\n"))
-           (org-remark-notes-set-properties beg end props)
-           (when (and orgid org-remark-use-org-id)
-             (insert (concat "[[id:" orgid "]" "[" title "]]"))))
-         (setq notes-props (list :body (org-remark-notes-get-body)))))
-      notes-props)))
+       ;; Different major-mode extension may have different structure of notes file
+       ;; e.g. nov.el file: 1. source file; 2. book; 3 highlight
+       ;;      text file:   1. source file; 2. highlight
+       ;; Note the lowest level is always the highlight (common). And
+       ;; the top level is the "source" -- the file or URL, etc.
+       (cl-loop for index from 1
+                for (filename-fn title-fn prop-to-find) in headline-constructors
+                ;; This variable "point" is set in order to be returned at
+                ;; the end of the loop.
+                with point = 1
+                do (let (filename title)
+                     (with-current-buffer source-buf
+                       (setq filename (funcall filename-fn))
+                       (setq title (funcall title-fn)))
+                     (with-current-buffer notes-buf
+                       (goto-char point)
+                       (setq point
+                             (or (org-find-property
+                                  prop-to-find filename)
+                                 (org-remark-new-headline
+                                  index title (list prop-to-find filename))))))
+                ;; Add the hightlight/note nodes after the headline loop.
+                finally (progn
+                          ;; need to move to the point at the end
+                          ;; of loop
+                          (goto-char point)
+                          ;; Highlight Headline is common to all major-mode extensions
+                          (setq notes-props
+                                (org-remark-highlight-add-or-update-highlight-headline
+                                 overlay source-buf notes-buf))))))
+    ;;; Set up notes buffer for sync for the source buffer
+    (with-current-buffer source-buf
+      (unless org-remark-source-setup-done
+        (org-remark-notes-setup notes-buf source-buf)))
+    ;;; Return notes-props
+    notes-props))
+
+(defun org-remark-new-headline (level title props)
+  "Add a new headline in the note buffer.
+
+This function assumes that the point is in the notes buffer.
+
+LEVEL is the headline level to be added. TITLE is the headline
+title. PROPS is the alist of properties to be added to the headline.
+
+Return the point of begining of current heading."
+  ;; If file-headline does not exist, create one at the bottom
+  (unless (= level 1)
+    ;; If top node, narrowing headline results in level 2 being
+    ;; prepended. By not narrowing at level 1, the new level 2
+    ;; headings will be appended at the bottom of the buffer.
+    (org-narrow-to-subtree))
+  (goto-char (point-max))
+  ;; Ensure to be in the beginning of line to add a new headline
+  (when (eolp) (open-line 1) (forward-line 1) (beginning-of-line))
+  (insert-char (string-to-char "*") level)
+  (insert (concat " " title "\n"))
+  (org-remark-notes-set-properties props)
+  (org-back-to-heading) (point))
+
+(defun org-remark-highlight-add-or-update-highlight-headline (highlight source-buf notes-buf)
+  "Add a new HIGHLIGHT headlne to the NOTES-BUF or update it.
+Return notes-props as a property list.
+
+HIGHLIGHT is an overlay from the SOURCE-BUF.
+
+Assume the current buffer is NOTES-BUF and point is placed on the
+beginning of source-headline, which should be one level up."
+  ;; Add org-remark-link with updated line-num as a property
+  (let (title beg end props id text filename link orgid)
+    (with-current-buffer source-buf
+      (setq title (org-remark-highlight-get-title)
+            beg (overlay-start highlight)
+            end (overlay-end highlight)
+            props (overlay-properties highlight)
+            id (plist-get props 'org-remark-id)
+            text (org-with-wide-buffer
+                  (replace-regexp-in-string
+                   "\n" " "
+                   (buffer-substring-no-properties beg end)))
+            filename (org-remark-source-get-file-name
+                      (org-remark-source-find-file-name))
+            link (run-hook-with-args-until-success
+                  'org-remark-highlight-link-to-source-functions filename beg)
+            orgid (org-remark-highlight-get-org-id beg))
+      ;; TODO ugly to add the beg end after setq above
+      (plist-put props org-remark-prop-source-beg (number-to-string beg))
+      (plist-put props org-remark-prop-source-end (number-to-string end))
+      (when link (plist-put props "org-remark-link" link)))
+    ;;; Make it explicit that we are now in the notes-buf, though it is
+    ;;; functionally redundant.
+    (with-current-buffer notes-buf
+      (let ((highlight-headline (org-find-property org-remark-prop-id id))
+            ;; Assume point is at the beginning of the parent headline
+            (level (1+ (org-current-level))))
+        (if highlight-headline
+            (progn
+              (goto-char highlight-headline)
+              ;; Update the existing headline and position properties
+              ;; Don't update the headline text when it already exists
+              ;; Let the user decide how to manage the headlines
+              ;; (org-edit-headline text)
+              (org-remark-notes-set-properties props))
+          ;; No headline with the marginal notes ID property. Create a new one
+          ;; at the end of the file's entry
+          (org-narrow-to-subtree)
+          (goto-char (point-max))
+          ;; Ensure to be in the beginning of line to add a new headline
+          (when (eolp) (open-line 1) (forward-line 1) (beginning-of-line))
+          ;; Create a headline
+          ;; Add a properties
+          (insert (concat (insert-char (string-to-char "*") level)
+                          " " text "\n"))
+          ;; org-remark-original-text should be added only when this
+          ;; headline is created. No update afterwards
+          (plist-put props "org-remark-original-text" text)
+          (org-remark-notes-set-properties props)
+          (when (and orgid org-remark-use-org-id)
+            (insert (concat "[[id:" orgid "]" "[" title "]]"))))
+        (list :body (org-remark-notes-get-body)
+              :original-text text)))))
 
 (defun org-remark-highlight-load (highlight)
   "Load a single HIGHLIGHT to the source buffer.
+
+Return highlight overlay that has been loaded on the source
+buffer.
+
 Assume the current buffer is the source buffer."
   (let* ((id (plist-get highlight :id))
          (location (plist-get highlight :location))
@@ -930,14 +1050,22 @@ Assume the current buffer is the source buffer."
     (let ((fn (intern (concat "org-remark-mark-" label))))
       (unless (functionp fn) (setq fn #'org-remark-mark))
       (setq ov (funcall fn beg end id :load))
-      ;; TODO Generalize the part that updates properties.
-      ;; :body should not be the fixed property.
-      ;; '(:text (val . fn) :prop1 (val . fn) :prop2 (val .fn))
-      ;; (dolist list)
-      (unless (overlay-get ov 'help-echo)
-        (overlay-put ov 'help-echo (plist-get props :body)))
-      (overlay-put ov '*org-remark-note-body
-                   (plist-get props :body)))))
+      (org-remark-highlight-put-props ov props)
+      ;; Return highlight overlay
+      ov)))
+
+(defun org-remark-highlight-put-props (highlight plist)
+  "Put PLIST from notes Org props to HIGHLIGHT overlay properties."
+  ;; TODO Generalize the part that updates properties.
+  ;; :body should not be the fixed property.
+  ;; '(:text (val . fn) :prop1 (val . fn) :prop2 (val .fn))
+  ;; (dolist list)
+  (unless (overlay-get highlight 'help-echo)
+    (overlay-put highlight 'help-echo (plist-get plist :body)))
+  (overlay-put highlight '*org-remark-note-body
+               (plist-get plist :body))
+  (overlay-put highlight '*org-remark-original-text
+               (plist-get plist :original-text)))
 
 (defun org-remark-highlight-clear (overlay)
   "Clear a single highlight OVERLAY.
@@ -946,6 +1074,44 @@ It is a utility function to take care of both
   (setq org-remark-highlights (delete overlay org-remark-highlights))
   (delete-overlay overlay))
 
+(defun org-remark-highlight-adjust-position-after-load (highlight text)
+  "Adjust the position of HIGHLIGHT (an overlay) after loaded.
+It searches for TEXT, which should be the original text of the highlight."
+  ;; Load works. but need one for sync. Need to re-think
+  ;; ' and ’ are different in regex of course.
+
+  ;; This is probably not very good for text that you change; and change the highlights.
+  ;; if you change it, this will bring it back to the "original".
+  (let* ((beg (overlay-start highlight))
+         (end (overlay-end highlight))
+         (paragraph-beg)(paragraph-end))
+    (org-with-wide-buffer
+     (unless (org-remark-string= (buffer-substring-no-properties beg end) text)
+       ;; Look at one paragraph ahead as it is possible that the
+       ;; position has been displaced across a paragraph
+       (goto-char beg) (backward-paragraph 2) (setq paragraph-beg (point))
+       (goto-char beg) (forward-paragraph 2) (setq paragraph-end (point))
+       (goto-char paragraph-beg)
+       ;; Search from the beginning of the previous paragraph to the end
+       ;; of next paragraph relative to the begining of the highlight
+       ;; overlay; this way, you don't need to look forward and backward
+       ;; separately.
+       (when (re-search-forward text paragraph-end :noerror)
+         (move-overlay highlight (match-beginning 0) (match-end 0)))
+       ;; Add property to indicate that the position has somehow been
+       ;; adjusted. Even if the new location could not be found,
+       ;; indicate that the fact that string should have moved.
+       (overlay-put highlight '*org-remark-position-adjusted t)))))
+
+(defun org-remark-highlight-link-to-source-default (filename point)
+  "Return Org link string for FILENAME & POINT for a highlight.
+POINT is used to compute the line number.
+
+Default function for `org-remark-highlight-link-to-source-functions'."
+  (if buffer-file-name
+      (let ((line-num (org-current-line point)))
+        (concat "[[file:" filename
+                (when line-num (format "::%d" line-num)) "]]"))))
 
 ;;;;; org-remark-notes
 ;;    Private functions that work on marginal notes buffer (notes
@@ -1032,7 +1198,7 @@ only one of the marginal notes buffer per session."
     ;; set the variable and return the indirect buffer
     (setq org-remark-last-notes-buffer ibuf)))
 
-(defun org-remark-notes-set-properties (beg end &optional props)
+(defun org-remark-notes-set-properties (props)
   "Set properties for the headline in the notes file.
 Return t.
 
@@ -1052,10 +1218,10 @@ drawer.
 In order to avoid adding org-remark-* overlay properties to Org
 properties, add prefix \"*\"."
 
-  (org-set-property org-remark-prop-source-beg
-                    (number-to-string beg))
-  (org-set-property org-remark-prop-source-end
-                    (number-to-string end))
+  ;; (org-set-property org-remark-prop-source-beg
+  ;;                   (number-to-string beg))
+  ;; (org-set-property org-remark-prop-source-end
+  ;;                   (number-to-string end))
 
   ;; Delete property.  Prefer `org-entry-delete' over
   ;; `org-delete-property' as the former is silent.
@@ -1083,7 +1249,7 @@ properties, add prefix \"*\"."
                ;; (org-end-of-meta-data :full) took us to next org heading):
                (or (looking-at org-heading-regexp)
                    (eobp)) ;; end of buffer
-               "[empty entry]"
+               nil ;; no body text for the annotation
              (buffer-substring-no-properties
               (point)
               (org-end-of-subtree))))))
@@ -1145,8 +1311,6 @@ highlight is a property list in the following properties:
   (when-let ((source-file-name (org-remark-source-get-file-name
                                 (org-remark-source-find-file-name)))
              (notes-buf notes-buf))
-    ;; TODO check if there is any relevant notes for the current file
-    ;; This can be used for adding icon to the highlight
     (let ((highlights))
       (with-current-buffer notes-buf
         (when (featurep 'org-remark-convert-legacy)
@@ -1162,68 +1326,67 @@ highlight is a property list in the following properties:
              ;; ensures that it is the beginning of a headline
              (org-narrow-to-subtree)
              (org-show-children)
-             ;; It's important that the headline levels are fixed
-             ;; H1: File
-             ;; H2: Highlighted region (each one has a dedicated H2 subtree)
+             ;; Headline levels now can be dynamically changed via
+             ;; highlight-constructors.
              (while (not (org-next-visible-heading 1))
-               (when-let ((id (org-entry-get (point) org-remark-prop-id))
-                          (beg (string-to-number
-                                (org-entry-get (point)
-                                               org-remark-prop-source-beg)))
-                          (end (string-to-number
-                                (org-entry-get (point)
-                                               org-remark-prop-source-end)))
-                          (text (org-remark-notes-get-body)))
-                 (push (list :id id
-                             :location (cons beg end)
-                             :label    (org-entry-get (point) "org-remark-label")
-                             :props    (list :body text))
-                       highlights))))
+               (let ((id (org-entry-get (point) org-remark-prop-id))
+                     (beg (org-entry-get (point)
+                                         org-remark-prop-source-beg))
+                     (end (org-entry-get (point)
+                                         org-remark-prop-source-end))
+                     (body (org-remark-notes-get-body)))
+                 ;; beg and end must exist. If either is nil
+                 ;; `string-to-number' errors
+                 (when (and id beg end)
+                   (setq beg (string-to-number beg))
+                   (setq end (string-to-number end))
+                   (push (list :id id
+                               :location (cons beg end)
+                               :label    (org-entry-get (point) "org-remark-label")
+                               :props    (list
+                                          :original-text
+                                          (org-entry-get (point) "org-remark-original-text")
+                                          :body body))
+                         highlights)))))
            highlights))))))
 
-(defvar org-remark-highlights-after-load-hook nil
-  "Hook run after `org-remark-highlights-load'.
-It is run with OVERLAYS and NOTES-BUF as arguments.  OVERLAYS are
-highlights.  It is run with the source buffer as current buffer.")
-
 (defun org-remark-highlights-load (&optional update)
-  "Visit `org-remark-notes-file' & load the saved highlights onto current buffer.
+  "Visit notes file & load the saved highlights onto current buffer.
 If there is no highlights or annotations for current buffer,
 output a message in the echo.
 
-Highlights tracked locally by variable `org-remark-highlights'
-cannot persist when you kill current buffer or quit Emacs.  It is
-recommended to set `org-remark-global-tracking-mode' in your
-configuration.  It automatically turns on `org-remark-mode'.
-
-Otherwise, do not forget to turn on `org-remark-mode' manually to
-load the highlights"
+Non-nil value for UPDATE is passed for the notes-source sync
+process."
+  ;; Some major modes such as nov.el reuse the buffer for a different
+  ;; "file". In this case, obsolete highlight overlays linger when you
+  ;; switch from one file to another. Thus, we need to begin loading by
+  ;; clearing the highlight overlays first.
+  ;;(org-remark-highlights-housekeep)
+  ;; In order to update the overlay, it is first gets deleted
+  ;; and newly loaded.  This way, we avoid duplicate of the same
+  ;; highlight.
+  (dolist (ov org-remark-highlights)
+    (org-remark-highlight-clear ov))
   ;; Loop highlights and add them to the current buffer
   (let (overlays) ;; highlight overlays
     (when-let* ((notes-filename (org-remark-notes-get-file-name))
-                (notes-buf (find-file-noselect notes-filename))
+                (default-dir default-directory)
+                (notes-buf (or (find-buffer-visiting notes-filename)
+                               (find-file-noselect notes-filename)))
                 (source-buf (current-buffer)))
-      (dolist (highlight (org-remark-highlights-get notes-buf) overlays)
-        (let* ((location (plist-get highlight :location))
-               (beg (car location))
-               (end (cdr location))
-               (id (plist-get highlight :id))
-               (ov (org-remark-find-overlay-in beg end id)))
-          ;; In order to update the overlay, it is first gets deleted
-          ;; and newly loaded.  This way, we avoid duplicate of the same
-          ;; highlight.
-
-          ;; FIXME Currently the when clause is used to guard against
-          ;; the case wheremarkre a highlight overlay is not found.  It should
-          ;; be an edge case but the highlight could have moved to a
-          ;; completely new location where the old location does not
-          ;; overlap with the new location at all.
-          (when ov (org-remark-highlight-clear ov))
-          (push (org-remark-highlight-load highlight) overlays)))
-      (unless update (org-remark-notes-setup notes-buf source-buf))
-      (run-hook-with-args 'org-remark-highlights-after-load-hook
-                          overlays notes-buf)
-      t)))
+      (with-demoted-errors
+          "Org-remark: error during loading highlights: %S"
+        ;; Load highlights
+        (dolist (highlight (org-remark-highlights-get notes-buf))
+          (push (org-remark-highlight-load highlight) overlays))
+        (unless update (org-remark-notes-setup notes-buf source-buf))
+        (if overlays
+            (progn (run-hook-with-args 'org-remark-highlights-after-load-functions
+                                       overlays notes-buf)
+                   ;; Return t
+                   t)
+          ;; if there is no overlays loaded, return nil
+          nil)))))
 
 (defun org-remark-highlights-get-positions (&optional reverse)
   "Return list of the beginning point of all visible highlights in this buffer.
@@ -1274,8 +1437,12 @@ check the current hidden state, thus not interactive.  Use
 state."
   (when-let ((highlights org-remark-highlights))
     (dolist (highlight highlights)
+      ;; Faces
       (overlay-put highlight '*org-remark-face (overlay-get highlight 'face))
       (overlay-put highlight 'face nil)
+      ;; Icons
+      (overlay-put highlight '*org-remark-icons (overlay-get highlight 'after-string))
+      (overlay-put highlight 'after-string nil)
       (overlay-put highlight '*org-remark-hidden t))
     (setq org-remark-highlights-hidden t)))
 
@@ -1287,8 +1454,12 @@ interactive.  Use `org-remark-toggle' command to manually toggle
 the show/hide state."
   (when-let ((highlights org-remark-highlights))
     (dolist (highlight highlights)
+      ;; Faces
       (overlay-put highlight '*org-remark-hidden nil)
-      (overlay-put highlight 'face (overlay-get highlight '*org-remark-face)))
+      (overlay-put highlight 'face (overlay-get highlight '*org-remark-face))
+      ;; Icons
+      (overlay-put highlight 'after-string (overlay-get highlight '*org-remark-icons))
+      (overlay-put highlight '*org-remark-icons nil))
     (setq org-remark-highlights-hidden nil)))
 
 (defun org-remark-highlights-housekeep ()
@@ -1328,13 +1499,12 @@ Case 2. The overlay points to no buffer
                (= (overlay-start ov) (overlay-end ov)))
       (when (and (not buffer-read-only)
                  (not (derived-mode-p 'special-mode)))
-                ;; buffer-size 0 happens for package like nov.el It
+                ;; buffer-size 0 happens for package like nov.el. It
                 ;; erases the buffer (size 0) and renders a new page in
                 ;; the same buffer.  In this case, buffer is writable.
         ;; Removing the notes here is meant to be automatically remove
         ;; notes when you delete a region that contains a higlight
         ;; overlay.
-
         ;; TODO Relying on the current major mode being derived from
         ;; special-mode is not the best.
         (org-remark-notes-remove (overlay-get ov 'org-remark-id)))
@@ -1342,6 +1512,52 @@ Case 2. The overlay points to no buffer
     (unless (overlay-buffer ov)
       (setq org-remark-highlights (delete ov org-remark-highlights))))
   t)
+
+(defun org-remark-highlights-adjust-positions (overlays _notes-buf)
+  "Run dolist and delgate the actual adjustment to another function.
+
+OVERLAYS are highlights.
+
+Check the original text property exits and not the same as the
+current highlighted text.
+
+Meant to be set to `org-remark-highlights-after-load-functions' by mode-specific
+extensions."
+  (dolist (ov overlays)
+    (let ((highlight-text (overlay-get ov '*org-remark-original-text)))
+      ;; original text exists AND
+      ;; it is different to the current
+      ;; TODO fix the highlight comparision logic
+      (when (and highlight-text
+                 (not (org-remark-string=
+                       highlight-text
+                       (buffer-substring-no-properties
+                        (overlay-start ov) (overlay-end ov)))))
+        (org-remark-highlight-adjust-position-after-load
+         ov highlight-text)))))
+
+(defun org-remark-highlights-add-icons (overlays _notes-buf)
+  "Add icons to OVERLAYS.
+Each overlay is a highlight."
+  (dolist (ov overlays)
+    (let ((propertized-string nil)
+          (note-body (overlay-get ov '*org-remark-note-body))
+          (position-adjusted (overlay-get ov '*org-remark-position-adjusted)))
+      (when (and note-body org-remark-icon-notes)
+        (let ((face (overlay-get ov 'face)))
+          (setq propertized-string (concat propertized-string
+                                           (propertize org-remark-icon-notes
+                                                       'face face)))))
+      ;; Even if the new location could not be found, indicate that it
+      ;; is different to the original
+      (when (and position-adjusted org-remark-icon-position-adjusted)
+        (setq propertized-string
+              (concat propertized-string
+                      (propertize org-remark-icon-position-adjusted
+                                  'face 'org-remark-highlighter-warning))))
+      (when propertized-string
+        (overlay-put ov 'after-string
+                     propertized-string)))))
 
 
 ;;;;; Other utilities
@@ -1380,6 +1596,15 @@ function extends the behavior and looks for the word at point"
                     end large)))
           (list beg end))
       (user-error "No region selected and the cursor is not on a word"))))
+
+(defun org-remark-string= (s1 s2)
+  "Like `string=' but remove newlines and spaces before compare."
+  (string=
+   ;; Cater to the case when the text is divided by a newline
+   ;; character \n. Remove all spaces and newline chars
+   ;; before comparing the strings.
+   (replace-regexp-in-string "[\n ]" "" s1)
+   (replace-regexp-in-string "[\n ]" "" s2)))
 
 
 ;;;; Footer

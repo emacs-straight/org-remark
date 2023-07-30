@@ -6,7 +6,7 @@
 ;; URL: https://github.com/nobiot/org-remark
 ;; Version: 1.1.0
 ;; Created: 22 December 2020
-;; Last modified: 17 July 2023
+;; Last modified: 29 July 2023
 ;; Package-Requires: ((emacs "27.1") (org "9.4"))
 ;; Keywords: org-mode, annotation, note-taking, marginal-notes, wp,
 
@@ -53,7 +53,7 @@
   '((((class color) (min-colors 88) (background light))
      :underline "#aecf90" :background "#ecf7ed")
     (((class color) (min-colors 88) (background dark))
-     :underline "#00422a" :background "#001904")
+     :underline "#00422a" :background "#1d3c25")
     (t
      :inherit highlight))
   "Face for the default highlighter pen.")
@@ -127,25 +127,11 @@ manually or some other function to either the headline or file."
 The current buffer is the note buffer."
   :type 'hook)
 
-(defcustom org-remark-icon-notes "(*)"
-  "String to be displayed when notes exist for a given highlight.
-Nil means no icon is to be displayed."
-  :type 'string)
-
-(defcustom org-remark-icon-position-adjusted "(d)"
-  "String to be displayed when a highlight position adjusted.
-Nil means no icon is to be displayed."
-  :type 'string)
-
-
 (defcustom org-remark-highlights-after-load-functions
-  '(org-remark-highlights-adjust-positions org-remark-highlights-add-icons)
+  '(org-remark-highlights-adjust-positions)
   "Abnormal hook run after `org-remark-highlights-load'.
 It is run with OVERLAYS and NOTES-BUF as arguments. OVERLAYS are
-highlights. It is run with the source buffer as current buffer.
-
-Add-icons should be the last function because other functions may
-do something relevant for an icon -- e.g. adjust-positon."
+highlights. It is run with the source buffer as current buffer."
   :type 'hook)
 
 
@@ -301,19 +287,23 @@ recommended to turn it on as part of Emacs initialization.
     (cond
      (org-remark-mode
       ;; Activate
+      (org-remark-icon-mode +1) ;; automatically enabled by default
       (org-remark-highlights-load)
       (add-hook 'after-save-hook #'org-remark-save nil t)
       (add-hook 'org-remark-highlight-link-to-source-functions
-                #'org-remark-highlight-link-to-source-default 80))
+                #'org-remark-highlight-link-to-source-default 80)
+      (add-hook 'after-revert-hook #'org-remark-highlights-load))
      (t
       ;; Deactivate
       (when org-remark-highlights
         (dolist (highlight org-remark-highlights)
           (delete-overlay highlight)))
       (setq org-remark-highlights nil)
+      (org-remark-icon-mode -1)
       (remove-hook 'after-save-hook #'org-remark-save t)
       (remove-hook 'org-remark-highlight-link-to-source-functions
-                   #'org-remark-highlight-link-to-source-default))))
+                   #'org-remark-highlight-link-to-source-default)
+      (remove-hook 'after-revert-hook #'org-remark-highlights-load))))
 
 
 ;;;; Org-remark Menu
@@ -428,11 +418,11 @@ marginal notes file.  The expected values are nil, :load and
 (when org-remark-create-default-pen-set
   ;; Create default pen set.
   (org-remark-create "red-line"
-                     '(:underline (:color "dark red" :style wave))
-                     '(CATEGORY "review" help-echo "Review this"))
+                     `(:underline (:color "dark red" :style wave))
+                     `(CATEGORY "review" help-echo "Review this"))
   (org-remark-create "yellow"
-                     '(:underline "gold2")
-                     '(CATEGORY "important")))
+                     `(:underline "gold2")
+                     `(CATEGORY "important")))
 
 (defun org-remark-save ()
   "Save all the highlights tracked in current buffer to notes buffer.
@@ -1350,6 +1340,7 @@ highlight is a property list in the following properties:
                          highlights)))))
            highlights))))))
 
+;;;###autoload
 (defun org-remark-highlights-load (&optional update)
   "Visit notes file & load the saved highlights onto current buffer.
 If there is no highlights or annotations for current buffer,
@@ -1361,12 +1352,11 @@ process."
   ;; "file". In this case, obsolete highlight overlays linger when you
   ;; switch from one file to another. Thus, we need to begin loading by
   ;; clearing the highlight overlays first.
-  ;;(org-remark-highlights-housekeep)
-  ;; In order to update the overlay, it is first gets deleted
-  ;; and newly loaded.  This way, we avoid duplicate of the same
+
+  ;; In order to update the highlight overlays, it is first gets deleted
+  ;; and newly loaded. This way, we avoid duplicate of the same
   ;; highlight.
-  (dolist (ov org-remark-highlights)
-    (org-remark-highlight-clear ov))
+  (org-remark-highlights-clear)
   ;; Loop highlights and add them to the current buffer
   (let (overlays) ;; highlight overlays
     (when-let* ((notes-filename (org-remark-notes-get-file-name))
@@ -1387,6 +1377,16 @@ process."
                    t)
           ;; if there is no overlays loaded, return nil
           nil)))))
+
+(defun org-remark-highlights-clear ()
+  "Delete all highlights in the buffer.
+
+This function also set `org-remark-highlights' to nil."
+  (setq org-remark-highlights nil)
+  (org-with-wide-buffer
+   (dolist (ov (overlays-in (point-min) (point-max)))
+     (when (overlay-get ov 'org-remark-id)
+       (delete-overlay ov)))))
 
 (defun org-remark-highlights-get-positions (&optional reverse)
   "Return list of the beginning point of all visible highlights in this buffer.
@@ -1428,6 +1428,9 @@ It returns t when sorting is done."
                        org-remark-highlights))
     t))
 
+(defvar org-remark-highlights-toggle-hide-functions nil)
+(defvar org-remark-highlights-toggle-show-functions nil)
+
 (defun org-remark-highlights-hide ()
   "Hide highlights.
 This function removes the font-lock-face of all the highlights,
@@ -1440,10 +1443,8 @@ state."
       ;; Faces
       (overlay-put highlight '*org-remark-face (overlay-get highlight 'face))
       (overlay-put highlight 'face nil)
-      ;; Icons
-      (overlay-put highlight '*org-remark-icons (overlay-get highlight 'after-string))
-      (overlay-put highlight 'after-string nil)
-      (overlay-put highlight '*org-remark-hidden t))
+      (overlay-put highlight '*org-remark-hidden t)
+      (run-hook-with-args 'org-remark-highlights-toggle-hide-functions highlight))
     (setq org-remark-highlights-hidden t)))
 
 (defun org-remark-highlights-show ()
@@ -1457,9 +1458,7 @@ the show/hide state."
       ;; Faces
       (overlay-put highlight '*org-remark-hidden nil)
       (overlay-put highlight 'face (overlay-get highlight '*org-remark-face))
-      ;; Icons
-      (overlay-put highlight 'after-string (overlay-get highlight '*org-remark-icons))
-      (overlay-put highlight '*org-remark-icons nil))
+      (run-hook-with-args 'org-remark-highlights-toggle-show-functions highlight))
     (setq org-remark-highlights-hidden nil)))
 
 (defun org-remark-highlights-housekeep ()
@@ -1536,29 +1535,6 @@ extensions."
         (org-remark-highlight-adjust-position-after-load
          ov highlight-text)))))
 
-(defun org-remark-highlights-add-icons (overlays _notes-buf)
-  "Add icons to OVERLAYS.
-Each overlay is a highlight."
-  (dolist (ov overlays)
-    (let ((propertized-string nil)
-          (note-body (overlay-get ov '*org-remark-note-body))
-          (position-adjusted (overlay-get ov '*org-remark-position-adjusted)))
-      (when (and note-body org-remark-icon-notes)
-        (let ((face (overlay-get ov 'face)))
-          (setq propertized-string (concat propertized-string
-                                           (propertize org-remark-icon-notes
-                                                       'face face)))))
-      ;; Even if the new location could not be found, indicate that it
-      ;; is different to the original
-      (when (and position-adjusted org-remark-icon-position-adjusted)
-        (setq propertized-string
-              (concat propertized-string
-                      (propertize org-remark-icon-position-adjusted
-                                  'face 'org-remark-highlighter-warning))))
-      (when propertized-string
-        (overlay-put ov 'after-string
-                     propertized-string)))))
-
 
 ;;;;; Other utilities
 (defun org-remark-source-get-file-name (filename)
@@ -1598,7 +1574,8 @@ function extends the behavior and looks for the word at point"
       (user-error "No region selected and the cursor is not on a word"))))
 
 (defun org-remark-string= (s1 s2)
-  "Like `string=' but remove newlines and spaces before compare."
+  "Like `string=' but remove newlines and spaces before compare.
+Return t if S1 and S2 are an identical string."
   (string=
    ;; Cater to the case when the text is divided by a newline
    ;; character \n. Remove all spaces and newline chars

@@ -1,5 +1,14 @@
 Current development version
 
+  - feat(info): Org-remark supports Info
+
+          No suitable hook is avaialble to trigger a function after the Info node
+          is rendered. This is necessary as Info renders a new node in the same
+          buffer (in the same way as Nov.el does).
+
+          Advice has been implemented. It is added and removed by
+          `org-remark-info-mode`.
+
   - feat: icons for additional information for highlights
 
           + Notes exists for the highlight (*)
@@ -61,6 +70,11 @@ Current development version
            errors and load stops prematurely. This can happen when the
            user manually manages the notes file and accidentally deletes
            the beg/end props.
+
+   - fix: default highlighter color for dark theme
+
+          No functional change. Changed the default color of the
+          highlighter to be more visible in the dark theme.
 
 Version 1.1.0
 

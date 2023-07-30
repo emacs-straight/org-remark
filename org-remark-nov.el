@@ -5,7 +5,7 @@
 ;; Author: Noboru Ota <me@nobiot.com>
 ;; URL: https://github.com/nobiot/org-remark
 ;; Created: 9 January 2023
-;; Last modified: 23 July 2023
+;; Last modified: 29 July 2023
 ;; Package-Requires: ((emacs "27.1") (org "9.4"))
 ;; Keywords: org-mode, annotation, note-taking, marginal-notes, wp
 
@@ -48,7 +48,10 @@
 
 (if (locate-library "nov") (require 'nov)
   (error "Org-remark: package `nov' is missing"))
-(require 'org-remark)
+(require 'org-remark-global-tracking)
+(declare-function org-remark-highlights-load "org-remark")
+(declare-function org-store-link "org")
+(defvar org-remark-prop-source-file)
 ;; To silence flymake
 (defvar nov-file-name)
 (defvar nov-documents)

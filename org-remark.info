@@ -1,4 +1,4 @@
-This is docpwI1ar.info, produced by makeinfo version 6.8 from
+This is docyk3dMS.info, produced by makeinfo version 6.8 from
 org-remark.texi.
 
 Copyright © 2021-2023 Free Software Foundation, Inc.
@@ -20,7 +20,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: docpwI1ar.info,  Node: Top,  Next: Installation,  Up: (dir)
+File: docyk3dMS.info,  Node: Top,  Next: Installation,  Up: (dir)
 
 Org-remark User Manual
 **********************
@@ -102,7 +102,7 @@ Customizing
 
 
 
-File: docpwI1ar.info,  Node: Installation,  Next: Getting Started,  Prev: Top,  Up: Top
+File: docyk3dMS.info,  Node: Installation,  Next: Getting Started,  Prev: Top,  Up: Top
 
 1 Installation
 **************
@@ -127,7 +127,7 @@ this:
 * Setup with use-package::
 
 
-File: docpwI1ar.info,  Node: Basic Setup,  Next: Setup with use-package,  Up: Installation
+File: docyk3dMS.info,  Node: Basic Setup,  Next: Setup with use-package,  Up: Installation
 
 1.1 Basic Setup
 ===============
@@ -179,7 +179,7 @@ Below are example keybindings you might like to consider:
        (define-key org-remark-mode-map (kbd "C-c n d") #'org-remark-delete))
 
 
-File: docpwI1ar.info,  Node: Setup with use-package,  Prev: Basic Setup,  Up: Installation
+File: docyk3dMS.info,  Node: Setup with use-package,  Prev: Basic Setup,  Up: Installation
 
 1.2 Setup with ‘use-package’
 ============================
@@ -213,7 +213,7 @@ above.
        (use-package org-remark-nov  :after nov  :config (org-remark-nov-mode +1)))
 
 
-File: docpwI1ar.info,  Node: Getting Started,  Next: Usage Features Concepts,  Prev: Installation,  Up: Top
+File: docyk3dMS.info,  Node: Getting Started,  Next: Usage Features Concepts,  Prev: Installation,  Up: Top
 
 2 Getting Started
 *****************
@@ -228,7 +228,7 @@ File: docpwI1ar.info,  Node: Getting Started,  Next: Usage Features Concepts,  P
 * Highlight and Annotate Info documentation in Info-mode::
 
 
-File: docpwI1ar.info,  Node: Highlighting and Annotating,  Next: Navigating from One Highlight to Another,  Up: Getting Started
+File: docyk3dMS.info,  Node: Highlighting and Annotating,  Next: Navigating from One Highlight to Another,  Up: Getting Started
 
 2.1 Highlighting and Annotating
 ===============================
@@ -267,7 +267,7 @@ marginal notes file is a normal Org file.  Edit your notes just as you
 would do with any other Org files and save the buffer.
 
 
-File: docpwI1ar.info,  Node: Navigating from One Highlight to Another,  Next: Create Your Own Highlighter Pens,  Prev: Highlighting and Annotating,  Up: Getting Started
+File: docyk3dMS.info,  Node: Navigating from One Highlight to Another,  Next: Create Your Own Highlighter Pens,  Prev: Highlighting and Annotating,  Up: Getting Started
 
 2.2 Navigating from One Highlight to Another
 ============================================
@@ -296,7 +296,7 @@ the next/previous highlights.  After you have reached the one you like
 to act on, press ‘o’ to open it, ‘r’ or ‘d’ to remove/delete it.
 
 
-File: docpwI1ar.info,  Node: Create Your Own Highlighter Pens,  Next: Highlight and Annotate Websites,  Prev: Navigating from One Highlight to Another,  Up: Getting Started
+File: docyk3dMS.info,  Node: Create Your Own Highlighter Pens,  Next: Highlight and Annotate Websites,  Prev: Navigating from One Highlight to Another,  Up: Getting Started
 
 2.3 Create Your Own Highlighter Pens
 ====================================
@@ -328,7 +328,7 @@ introduced in this section and more ways in which you can customize
 Org-remark.
 
 
-File: docpwI1ar.info,  Node: Highlight and Annotate Websites,  Next: Highlight and Annotate EPUB Books,  Prev: Create Your Own Highlighter Pens,  Up: Getting Started
+File: docyk3dMS.info,  Node: Highlight and Annotate Websites,  Next: Highlight and Annotate EPUB Books,  Prev: Create Your Own Highlighter Pens,  Up: Getting Started
 
 2.4 Highlight and Annotate Websites
 ===================================
@@ -343,7 +343,7 @@ websites get edited.  Lear more about the feature in *note What is
 Automatic Adjustment of Highlight Positions?::
 
 
-File: docpwI1ar.info,  Node: Highlight and Annotate EPUB Books,  Next: Highlight and Annotate Info documentation in Info-mode,  Prev: Highlight and Annotate Websites,  Up: Getting Started
+File: docyk3dMS.info,  Node: Highlight and Annotate EPUB Books,  Next: Highlight and Annotate Info documentation in Info-mode,  Prev: Highlight and Annotate Websites,  Up: Getting Started
 
 2.5 Highlight and Annotate EPUB Books
 =====================================
@@ -358,7 +358,7 @@ automatically adjust the highlight positions: *note What is Automatic
 Adjustment of Highlight Positions?::
 
 
-File: docpwI1ar.info,  Node: Highlight and Annotate Info documentation in Info-mode,  Prev: Highlight and Annotate EPUB Books,  Up: Getting Started
+File: docyk3dMS.info,  Node: Highlight and Annotate Info documentation in Info-mode,  Prev: Highlight and Annotate EPUB Books,  Up: Getting Started
 
 2.6 Highlight and Annotate Info documentation in ‘Info-mode’
 ============================================================
@@ -371,7 +371,7 @@ it.  Refer to the example of a basic setup given in *note
 Installation::.
 
 
-File: docpwI1ar.info,  Node: Usage Features Concepts,  Next: Customizing,  Prev: Getting Started,  Up: Top
+File: docyk3dMS.info,  Node: Usage Features Concepts,  Next: Customizing,  Prev: Getting Started,  Up: Top
 
 3 Usage, Features, Concepts
 ***************************
@@ -387,7 +387,7 @@ File: docpwI1ar.info,  Node: Usage Features Concepts,  Next: Customizing,  Prev:
 * Other Commands::
 
 
-File: docpwI1ar.info,  Node: How to Create Custom Highlighter Pens,  Next: How to Automatically Turn On Highlights after Re-starting Emacs,  Up: Usage Features Concepts
+File: docyk3dMS.info,  Node: How to Create Custom Highlighter Pens,  Next: How to Automatically Turn On Highlights after Re-starting Emacs,  Up: Usage Features Concepts
 
 3.1 How to Create Custom Highlighter Pens
 =========================================
@@ -444,7 +444,7 @@ range-highlighter one.  The ‘LABEL’ does not need to include the string
      notes Org files.
 
 
-File: docpwI1ar.info,  Node: How to Automatically Turn On Highlights after Re-starting Emacs,  Next: How to Manage Marginal Notes,  Prev: How to Create Custom Highlighter Pens,  Up: Usage Features Concepts
+File: docyk3dMS.info,  Node: How to Automatically Turn On Highlights after Re-starting Emacs,  Next: How to Manage Marginal Notes,  Prev: How to Create Custom Highlighter Pens,  Up: Usage Features Concepts
 
 3.2 How to Automatically Turn On Highlights after Re-starting Emacs
 ===================================================================
@@ -463,7 +463,7 @@ Without this global minor mode, you would need to remember to activate
 This is often unpractical.
 
 
-File: docpwI1ar.info,  Node: How to Manage Marginal Notes,  Next: How to Remove and Delete Highlights,  Prev: How to Automatically Turn On Highlights after Re-starting Emacs,  Up: Usage Features Concepts
+File: docyk3dMS.info,  Node: How to Manage Marginal Notes,  Next: How to Remove and Delete Highlights,  Prev: How to Automatically Turn On Highlights after Re-starting Emacs,  Up: Usage Features Concepts
 
 3.3 How to Manage Marginal Notes
 ================================
@@ -477,7 +477,7 @@ File: docpwI1ar.info,  Node: How to Manage Marginal Notes,  Next: How to Remove 
 * How to Use Relative or Absolute File Names for Links in Marginal Notes File::
 
 
-File: docpwI1ar.info,  Node: Marginal Notes File,  Next: Organize Headlines in Marginal Notes Buffer in Your Way,  Up: How to Manage Marginal Notes
+File: docyk3dMS.info,  Node: Marginal Notes File,  Next: Organize Headlines in Marginal Notes Buffer in Your Way,  Up: How to Manage Marginal Notes
 
 3.3.1 Marginal Notes File
 -------------------------
@@ -530,7 +530,7 @@ custom properties in your own custom pen functions (for how to create
 your own pens, *note How to Create Custom Highlighter Pens::).
 
 
-File: docpwI1ar.info,  Node: Organize Headlines in Marginal Notes Buffer in Your Way,  Next: *marginal-notes* Buffer,  Prev: Marginal Notes File,  Up: How to Manage Marginal Notes
+File: docyk3dMS.info,  Node: Organize Headlines in Marginal Notes Buffer in Your Way,  Next: *marginal-notes* Buffer,  Prev: Marginal Notes File,  Up: How to Manage Marginal Notes
 
 3.3.2 Organize Headlines in Marginal Notes Buffer in Your Way
 -------------------------------------------------------------
@@ -565,7 +565,7 @@ show the headlines in your agenda.
       I will revisit this function later.
 
 
-File: docpwI1ar.info,  Node: *marginal-notes* Buffer,  Next: How to Change Where Marginal Notes File is Saved,  Prev: Organize Headlines in Marginal Notes Buffer in Your Way,  Up: How to Manage Marginal Notes
+File: docyk3dMS.info,  Node: *marginal-notes* Buffer,  Next: How to Change Where Marginal Notes File is Saved,  Prev: Organize Headlines in Marginal Notes Buffer in Your Way,  Up: How to Manage Marginal Notes
 
 3.3.3 ‘*marginal-notes*’ Buffer
 -------------------------------
@@ -590,7 +590,7 @@ If you have ‘tooltip-mode’ mode turned on, the excerpt is displayed as a
 took tip for the highlight.
 
 
-File: docpwI1ar.info,  Node: How to Change Where Marginal Notes File is Saved,  Next: How to Use Relative or Absolute File Names for Links in Marginal Notes File,  Prev: *marginal-notes* Buffer,  Up: How to Manage Marginal Notes
+File: docyk3dMS.info,  Node: How to Change Where Marginal Notes File is Saved,  Next: How to Use Relative or Absolute File Names for Links in Marginal Notes File,  Prev: *marginal-notes* Buffer,  Up: How to Manage Marginal Notes
 
 3.3.4 How to Change Where Marginal Notes File is Saved
 ------------------------------------------------------
@@ -638,7 +638,7 @@ Create a marginal notes file for each source file and store all of them in a spe
                 #'my/function)
 
 
-File: docpwI1ar.info,  Node: How to Use Relative or Absolute File Names for Links in Marginal Notes File,  Prev: How to Change Where Marginal Notes File is Saved,  Up: How to Manage Marginal Notes
+File: docyk3dMS.info,  Node: How to Use Relative or Absolute File Names for Links in Marginal Notes File,  Prev: How to Change Where Marginal Notes File is Saved,  Up: How to Manage Marginal Notes
 
 3.3.5 How to Use Relative or Absolute File Names for Links in Marginal Notes File
 ---------------------------------------------------------------------------------
@@ -674,7 +674,7 @@ If you choose to use relative file names, the relative path is computed
 from ‘default-directory’.
 
 
-File: docpwI1ar.info,  Node: How to Remove and Delete Highlights,  Next: What is Automatic Adjustment of Highlight Positions?,  Prev: How to Manage Marginal Notes,  Up: Usage Features Concepts
+File: docyk3dMS.info,  Node: How to Remove and Delete Highlights,  Next: What is Automatic Adjustment of Highlight Positions?,  Prev: How to Manage Marginal Notes,  Up: Usage Features Concepts
 
 3.4 How to Remove and Delete Highlights
 =======================================
@@ -725,7 +725,7 @@ documentation of the customizing variable
 ‘org-remark-delete’.
 
 
-File: docpwI1ar.info,  Node: What is Automatic Adjustment of Highlight Positions?,  Next: How to Set Org-remark to Use SVG Icons,  Prev: How to Remove and Delete Highlights,  Up: Usage Features Concepts
+File: docyk3dMS.info,  Node: What is Automatic Adjustment of Highlight Positions?,  Next: How to Set Org-remark to Use SVG Icons,  Prev: How to Remove and Delete Highlights,  Up: Usage Features Concepts
 
 3.5 What is Automatic Adjustment of Highlight Positions?
 ========================================================
@@ -779,7 +779,7 @@ customizing variables:
    • Face: ‘org-remark-highlighter-warning’
 
 
-File: docpwI1ar.info,  Node: How to Set Org-remark to Use SVG Icons,  Next: Other Commands,  Prev: What is Automatic Adjustment of Highlight Positions?,  Up: Usage Features Concepts
+File: docyk3dMS.info,  Node: How to Set Org-remark to Use SVG Icons,  Next: Other Commands,  Prev: What is Automatic Adjustment of Highlight Positions?,  Up: Usage Features Concepts
 
 3.6 How to Set Org-remark to Use SVG Icons
 ==========================================
@@ -828,7 +828,7 @@ to reload the highlights.  You should see the icon you have defined
 instead of the default “(*)” string.
 
 
-File: docpwI1ar.info,  Node: Other Commands,  Prev: How to Set Org-remark to Use SVG Icons,  Up: Usage Features Concepts
+File: docyk3dMS.info,  Node: Other Commands,  Prev: How to Set Org-remark to Use SVG Icons,  Up: Usage Features Concepts
 
 3.7 Other Commands
 ==================
@@ -864,7 +864,7 @@ Command ‘org-remark-prev’
      Move to the previous highlight, if any.
 
 
-File: docpwI1ar.info,  Node: Customizing,  Next: Known Limitations,  Prev: Usage Features Concepts,  Up: Top
+File: docyk3dMS.info,  Node: Customizing,  Next: Known Limitations,  Prev: Usage Features Concepts,  Up: Top
 
 4 Customizing
 *************
@@ -962,7 +962,7 @@ Option ‘org-remark-highlights-after-load-functions’
 * Customizing Line Highlights::
 
 
-File: docpwI1ar.info,  Node: Customizing Line Highlights,  Up: Customizing
+File: docyk3dMS.info,  Node: Customizing Line Highlights,  Up: Customizing
 
 4.1 Customizing Line Highlights
 ===============================
@@ -1000,7 +1000,7 @@ Option ‘org-remark-line-ellipsis’
 The maximum is set in ‘org-remark-line-heading-title-max-length’.
 
 
-File: docpwI1ar.info,  Node: Known Limitations,  Next: Credits,  Prev: Customizing,  Up: Top
+File: docyk3dMS.info,  Node: Known Limitations,  Next: Credits,  Prev: Customizing,  Up: Top
 
 5 Known Limitations
 *******************
@@ -1033,7 +1033,7 @@ With ‘org-remark-eww-mode’ highlights can get displaced
      there is no way to fix the location of highlights.
 
 
-File: docpwI1ar.info,  Node: Credits,  Next: Contributing & Feedback,  Prev: Known Limitations,  Up: Top
+File: docyk3dMS.info,  Node: Credits,  Next: Contributing & Feedback,  Prev: Known Limitations,  Up: Top
 
 6 Credits
 *********
@@ -1070,7 +1070,7 @@ Transient navigation feature
      by Paul W.  Rankin (GitHub user rnkn (https://github.com/rnkn)).
 
 
-File: docpwI1ar.info,  Node: Contributing & Feedback,  Next: Index - Features,  Prev: Credits,  Up: Top
+File: docyk3dMS.info,  Node: Contributing & Feedback,  Next: Index - Features,  Prev: Credits,  Up: Top
 
 7 Contributing & Feedback
 *************************
@@ -1088,7 +1088,7 @@ be included in GNU Emacs” (Org Mode website
 Thank you.
 
 
-File: docpwI1ar.info,  Node: Index - Features,  Next: Index - Commands,  Prev: Contributing & Feedback,  Up: Top
+File: docyk3dMS.info,  Node: Index - Features,  Next: Index - Commands,  Prev: Contributing & Feedback,  Up: Top
 
 Appendix A Index - Features
 ***************************
@@ -1131,7 +1131,7 @@ Appendix A Index - Features
                                                                 (line 6)
 
 
-File: docpwI1ar.info,  Node: Index - Commands,  Next: Index - User Options,  Prev: Index - Features,  Up: Top
+File: docyk3dMS.info,  Node: Index - Commands,  Next: Index - User Options,  Prev: Index - Features,  Up: Top
 
 Appendix B Index - Commands
 ***************************
@@ -1179,7 +1179,7 @@ Appendix B Index - Commands
                                                                 (line 6)
 
 
-File: docpwI1ar.info,  Node: Index - User Options,  Next: GNU Free Documentation License,  Prev: Index - Commands,  Up: Top
+File: docyk3dMS.info,  Node: Index - User Options,  Next: GNU Free Documentation License,  Prev: Index - Commands,  Up: Top
 
 Appendix C Index - User Options
 *******************************
@@ -1233,7 +1233,7 @@ Appendix C Index - User Options
 * org-remark-use-org-id:                 Customizing.           (line 6)
 
 
-File: docpwI1ar.info,  Node: GNU Free Documentation License,  Prev: Index - User Options,  Up: Top
+File: docyk3dMS.info,  Node: GNU Free Documentation License,  Prev: Index - User Options,  Up: Top
 
 Appendix D GNU Free Documentation License
 *****************************************

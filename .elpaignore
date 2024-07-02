@@ -1,0 +1,10 @@
+demo
+test
+test*
+docs
+resources
+Makefile
+.gitignore
+.elpaignore
+.github
+.dir-locals.el

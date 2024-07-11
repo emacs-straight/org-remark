@@ -1,11 +1,10 @@
-                         _____________________
-
+                         ━━━━━━━━━━━━━━━━━━━━━
                           README – ORG-REMARK
-                         _____________________
+                         ━━━━━━━━━━━━━━━━━━━━━
 
 
 Table of Contents
-_________________
+─────────────────
 
 1. Introduction
 2. Features
@@ -19,7 +18,7 @@ _________________
 
 
 1 Introduction
-==============
+══════════════
 
   Org-remark lets you highlight and annotate text files, websites, EPUB
   books and Info documentation with using Org mode.
@@ -63,64 +62,64 @@ _________________
 
 
 2 Features
-==========
+══════════
 
-  - Highlight and annotate any text file. The highlights and notes are
+  • Highlight and annotate any text file. The highlights and notes are
     kept in an Org file as the plain text database. This lets you easily
     manage your marginal notes and use the built-in Org facilities on
-    them -- e.g. create a sparse tree based on the category of the notes
+    them – e.g. create a sparse tree based on the category of the notes
 
-  - Create your your own highlighter pens with different colors, type
+  • Create your your own highlighter pens with different colors, type
     (e.g. underline, squiggle, etc. optionally with Org's category for
     search and filter on your highlights and notes)
 
-  - Have the same highlighting and annotating functionality for
+  • Have the same highlighting and annotating functionality for
 
-    + Websites when you use EWW to browse them
+    ⁃ Websites when you use EWW to browse them
 
-    + EPUB books with [nov.el]
+    ⁃ EPUB books with [nov.el]
 
-    + Info documentation
+    ⁃ Info documentation
 
 
 [nov.el] <https://depp.brause.cc/nov.el/>
 
 
 3 Installation
-==============
+══════════════
 
   This package is available on:
 
-  - [GNU-ELPA] (releases only; equivalent to MELPA-Stable)
-  - [GNU-devel ELPA] (unreleased main branch; equivalent to MELPA)
+  • [GNU-ELPA] (releases only; equivalent to MELPA-Stable)
+  • [GNU-devel ELPA] (unreleased main branch; equivalent to MELPA)
 
   GNU ELPA should be already set up in your Emacs by default. If you
   wish to add GNU-devel ELPA, simply add its URL to `package-archives'
   like this:
 
-  ,----
-  | (add-to-list 'package-archives
-  |              '("gnu-devel" . "https://elpa.gnu.org/devel/") :append)
-  `----
+  ┌────
+  │ (add-to-list 'package-archives
+  │ 	     '("gnu-devel" . "https://elpa.gnu.org/devel/") :append)
+  └────
 
   After installation, we suggest you put the setup below in your
   configuration.
 
-  ,----
-  | (org-remark-global-tracking-mode +1)
-  | 
-  | ;; Optional if you would like to highlight websites via eww-mode
-  | (with-eval-after-load 'eww
-  |   (org-remark-eww-mode +1))
-  | 
-  | ;; Optional if you would like to highlight EPUB books via nov.el
-  | (with-eval-after-load 'nov
-  |   (org-remark-nov-mode +1))
-  | 
-  | ;; Optional if you would like to highlight Info documentation via Info-mode
-  | (with-eval-after-load 'info
-  |   (org-remark-info-mode +1))
-  `----
+  ┌────
+  │ (org-remark-global-tracking-mode +1)
+  │ 
+  │ ;; Optional if you would like to highlight websites via eww-mode
+  │ (with-eval-after-load 'eww
+  │   (org-remark-eww-mode +1))
+  │ 
+  │ ;; Optional if you would like to highlight EPUB books via nov.el
+  │ (with-eval-after-load 'nov
+  │   (org-remark-nov-mode +1))
+  │ 
+  │ ;; Optional if you would like to highlight Info documentation via Info-mode
+  │ (with-eval-after-load 'info
+  │   (org-remark-info-mode +1))
+  └────
 
   Unless you explicitly load `org' during Emacs initialization, I
   suggest to defer loading `org-remark' (thus there is no `(require
@@ -131,48 +130,50 @@ _________________
 
   Below are example keybindings you might like to consider:
 
-  ,----
-  | ;; Key-bind `org-remark-mark' to global-map so that you can call it
-  | ;; globally before the library is loaded.
-  | 
-  | (define-key global-map (kbd "C-c n m") #'org-remark-mark)
-  | 
-  | ;; The rest of keybidings are done only on loading `org-remark'
-  | (with-eval-after-load 'org-remark
-  |   (define-key org-remark-mode-map (kbd "C-c n o") #'org-remark-open)
-  |   (define-key org-remark-mode-map (kbd "C-c n ]") #'org-remark-view-next)
-  |   (define-key org-remark-mode-map (kbd "C-c n [") #'org-remark-view-prev)
-  |   (define-key org-remark-mode-map (kbd "C-c n r") #'org-remark-remove)
-  |   (define-key org-remark-mode-map (kbd "C-c n d") #'org-remark-delete))
-  `----
+  ┌────
+  │ ;; Key-bind `org-remark-mark' to global-map so that you can call it
+  │ ;; globally before the library is loaded.
+  │ 
+  │ (define-key global-map (kbd "C-c n m") #'org-remark-mark)
+  │ 
+  │ ;; The rest of keybidings are done only on loading `org-remark'
+  │ (with-eval-after-load 'org-remark
+  │   (define-key org-remark-mode-map (kbd "C-c n o") #'org-remark-open)
+  │   (define-key org-remark-mode-map (kbd "C-c n ]") #'org-remark-view-next)
+  │   (define-key org-remark-mode-map (kbd "C-c n [") #'org-remark-view-prev)
+  │   (define-key org-remark-mode-map (kbd "C-c n r") #'org-remark-remove)
+  │   (define-key org-remark-mode-map (kbd "C-c n d") #'org-remark-delete))
+  └────
 
   Alternatively, you can use `use-package' to set up Org-remark. The
   example provided below should be equivalent to the setup described
   above.
 
-  ,----
-  | (use-package org-remark
-  |   :bind (;; :bind keyword also implicitly defers org-remark itself.
-  |          ;; Keybindings before :map is set for global-map.
-  |          ("C-c n m" . org-remark-mark)
-  |          :map org-remark-mode-map
-  |          ("C-c n o" . org-remark-open)
-  |          ("C-c n ]" . org-remark-view-next)
-  |          ("C-c n [" . org-remark-view-prev)
-  |          ("C-c n r" . org-remark-remove)
-  |          ("C-c n d" . org-remark-delete))
-  |   ;; Alternative way to enable `org-remark-global-tracking-mode' in
-  |   ;; `after-init-hook'.
-  |   ;; :hook (after-init . org-remark-global-tracking-mode)
-  |   :init
-  |   ;; It is recommended that `org-remark-global-tracking-mode' be
-  |   ;; enabled when Emacs initializes. Alternatively, you can put it to
-  |   ;; `:after-init-hook' to load it after Emacs has been initialized.
-  |   (org-remark-global-tracking-mode +1)
-  |   (use-package org-remark-info :after info :config (org-remark-info-mode +1))
-  |   (use-package org-remark-eww  :after eww  :config (org-remark-eww-mode +1))
-  |   (use-package org-remark-nov  :after nov  :config (org-remark-nov-mode +1)))
-  `----
+  ┌────
+  │ (use-package org-remark
+  │   :bind (;; :bind keyword also implicitly defers org-remark itself.
+  │ 	 ;; Keybindings before :map is set for global-map.
+  │ 	 ("C-c n m" . org-remark-mark)
+  │ 	 ("C-c n l" . org-remark-mark-line)
+  │ 	 :map org-remark-mode-map
+  │ 	 ("C-c n o" . org-remark-open)
+  │ 	 ("C-c n ]" . org-remark-view-next)
+  │ 	 ("C-c n [" . org-remark-view-prev)
+  │ 	 ("C-c n r" . org-remark-remove)
+  │ 	 ("C-c n d" . org-remark-delete))
+  │   ;; Alternative way to enable `org-remark-global-tracking-mode' in
+  │   ;; `after-init-hook'.
+  │   ;; :hook (after-init . org-remark-global-tracking-mode)
+  │   :init
+  │   ;; It is recommended that `org-remark-global-tracking-mode' be
+  │   ;; enabled when Emacs initializes. Alternatively, you can put it to
+  │   ;; `after-init-hook' as in the comment above
+  │   (org-remark-global-tracking-mode +1)
+  │   :config
+  │   (use-package org-remark-info :after info :config (org-remark-info-mode +1))
+  │   (use-package org-remark-eww  :after eww  :config (org-remark-eww-mode +1))
+  │   (use-package org-remark-nov  :after nov  :config (org-remark-nov-mode +1)))
+  └────
 
 
 [GNU-ELPA] <https://elpa.gnu.org/packages/org-remark.html>
@@ -181,7 +182,7 @@ _________________
 
 
 4 Contributing and Feedback
-===========================
+═══════════════════════════
 
   Create issues, discussion, and/or pull requests in the GitHub
   repository. All welcome.
@@ -201,36 +202,29 @@ _________________
 
 
 5 Contributors
-==============
+══════════════
 
-  New features
+  *New features*
 
+  • EPUB books (nov.el) support would not have been possible without
+    collaboration with @sati-bodhi
+  • `echo-text' update from the marginal notes to the source buffer by
+    marty hiatt (@mooseyboots)
+  • Support for websites with `eww-mode' by Vedang Manerikar (@vedang)
 
+  *Bug fixes*
 
-        EPUB books (nov.el) support would not have been possible without
-        collaboration with @sati-bodhi
-
-        `echo-text' update from the marginal notes to the source buffer
-        by marty hiatt (@mooseyboots)
-
-        Support for websites with `eww-mode' by Vedang Manerikar
-        (@vedang)
-
-  Bug fixes
   @alan-w-255, Nan Jun Jie (@nanjj), @sgati-bodhi
 
-  Documentation (including README, NEWS, CHANGELOG)
+  *Documentation (including README, NEWS, CHANGELOG)*
+
   @randomwangran, marty hiatt (@mooseyboots), @jsntn
 
-  All the comments, issues, and questions on GitHub
-  @randomwangran, @karthink, @holtzermann17, @shombando, @magthe,
-  @linwaytin, @rtrppl, @ryanprior, @ericsfraga, @darcamo, @zhewy,
-  @QMeqGR, @Vidianos-Giannitsis, @AtomicNess123, @mooseyboots, @ouboub,
-  @dian-yu-luo, @SylvianHemus, @basaran, @Ypot, @oatmealm, @sati-bodhi
+  Thank-you to all the comments, issues, and questions on GitHub!
 
 
 6 License
-=========
+═════════
 
   This work is licensed under a GPLv3 license. For a full copy of the
   license, refer to [LICENSE].

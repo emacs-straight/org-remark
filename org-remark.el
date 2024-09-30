@@ -2,28 +2,30 @@
 
 ;; Copyright (C) 2020-2024 Free Software Foundation, Inc.
 
+;; This program is free software: you can redistribute it and/or modify it
+;; under the terms of the GNU General Public License as published by the
+;; Free Software Foundation, either version 3 of the License, or (at your
+;; option) any later version.
+
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License along
+;; with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ;; Author: Noboru Ota <me@nobiot.com>
-;; URL: https://github.com/nobiot/org-remark
-;; Version: 1.2.2
 ;; Created: 22 December 2020
-;; Last modified: 29 June 2024
-;; Package-Requires: ((emacs "27.1") (org "9.4"))
+;; Last modified: 29 September 2024
+
+;; URL: https://github.com/nobiot/org-remark
 ;; Keywords: org-mode, annotation, note-taking, marginal-notes, wp,
 
+;; Version: 1.2.2
+;; Package-Requires: ((emacs "27.1") (org "9.4"))
+
 ;; This file is not part of GNU Emacs.
-
-;; This program is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
-
-;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -747,19 +749,18 @@ not part of the undo tree. You can undo the deletion in the
 marginal notes buffer and then save it to sync the highlight back
 in the source."
   (interactive "d\nP")
-  (let* ((ov (org-remark-find-dwim point))
-         (id (overlay-get ov 'org-remark-id)))
-    (when (and ov id)
-      ;; Remove the highlight overlay and id. If there is more than one,
-      ;; remove only one. It should be last-in-first-out in general but
-      ;; overlays functions don't guarantee it (when delete
-      ;; (org-remark-open point :view-only))
-      (org-remark-highlight-clear ov)
-      ;; Update the notes file accordingly
-      (org-remark-notes-remove id delete)
-      (org-remark-highlights-housekeep)
-      (org-remark-highlights-sort)
-      t)))
+  (and-let* ((ov (org-remark-find-dwim point))
+             (id (overlay-get ov 'org-remark-id)))
+    ;; Remove the highlight overlay and id. If there is more than one,
+    ;; remove only one. It should be last-in-first-out in general but
+    ;; overlays functions don't guarantee it (when delete
+    ;; (org-remark-open point :view-only))
+    (org-remark-highlight-clear ov)
+    ;; Update the notes file accordingly
+    (org-remark-notes-remove id delete)
+    (org-remark-highlights-housekeep)
+    (org-remark-highlights-sort)
+    t))
 
 (defun org-remark-delete (point &optional arg)
   "Delete the highlight at POINT and marginal notes for it.
@@ -964,11 +965,14 @@ round-trip back to the notes file."
   (when org-remark-highlights-hidden (org-remark-highlights-show))
   (org-with-wide-buffer
    (let* ((org-remark-type (plist-get properties 'org-remark-type))
-          (ov (org-remark-highlight-make-overlay beg end face org-remark-type))
           ;;(make-overlay beg end nil :front-advance))
           ;; UUID is too long; does not have to be the full length
           (id (if id id (substring (org-id-uuid) 0 8)))
-          (filename (org-remark-source-find-file-name)))
+          (filename (org-remark-source-find-file-name))
+          ;; Add highlight overlay only when filename is assigned.
+          (ov (when filename
+                (org-remark-highlight-make-overlay
+                 beg end face org-remark-type))))
      (if (not filename)
          (message (format "org-remark: Highlights not saved.\
  This buffer (%s) is not supported" (symbol-name major-mode)))

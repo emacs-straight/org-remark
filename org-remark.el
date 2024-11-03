@@ -17,7 +17,7 @@
 
 ;; Author: Noboru Ota <me@nobiot.com>
 ;; Created: 22 December 2020
-;; Last modified: 25 October 2024
+;; Last modified: 02 November 2024
 
 ;; URL: https://github.com/nobiot/org-remark
 ;; Keywords: org-mode, annotation, note-taking, marginal-notes, wp,
@@ -1036,7 +1036,10 @@ This function assumes
 the current buffer is the source buffer.
 
 Utility function to work with a single highlight overlay."
-  (or (cadr (assoc "TITLE" (org-collect-keywords '("TITLE"))))
+  (or (and (derived-mode-p 'org-mode)
+           ;; `org-collect' gives an warning if the current buffer is not an
+           ;; org-mode
+           (cadr (assoc "TITLE" (org-collect-keywords '("TITLE")))))
       (let* ((full-name (org-remark-source-find-file-name))
              (filename (if (and (string= "" (file-name-nondirectory full-name))
                                 (string-match "[\/]+\\'" full-name))
@@ -1618,9 +1621,10 @@ highlight is a property list in the following properties:
         (org-with-wide-buffer
          (let ((heading (org-find-property
                          org-remark-prop-source-file source-file-name)))
-           (if (and (not heading) org-remark-report-no-highlights)
-               (message "No highlights or annotations found for %s."
-                        source-file-name)
+           (if (not heading)
+               (when org-remark-report-no-highlights
+                 (message "No highlights or annotations found for %s."
+                          source-file-name))
              (goto-char heading)
              ;; Narrow to only subtree for a single file.  `org-find-property'
              ;; ensures that it is the beginning of a headline
@@ -1686,17 +1690,18 @@ process."
             "Org-remark: error during loading highlights: %S"
           ;; Load highlights with demoted errors -- this makes the loading
           ;; robust against errors in loading.
-          (dolist (highlight (org-remark-highlights-get notes-buf))
-            (let ((ov (org-remark-highlight-load highlight)))
-              (when ov (push ov overlays))))
-          (unless update (org-remark-notes-setup notes-buf source-buf))
-          (if overlays
-              (progn (run-hook-with-args 'org-remark-highlights-after-load-functions
-                                         overlays notes-buf)
-                     ;; Return t
-                     t)
-            ;; if there is no overlays loaded, return nil
-            nil))))))
+          (org-with-wide-buffer
+           (dolist (highlight (org-remark-highlights-get notes-buf))
+             (let ((ov (org-remark-highlight-load highlight)))
+               (when ov (push ov overlays))))
+           (unless update (org-remark-notes-setup notes-buf source-buf))
+           (if overlays
+               (progn (run-hook-with-args 'org-remark-highlights-after-load-functions
+                                          overlays notes-buf)
+                      ;; Return t
+                      t)
+             ;; if there is no overlays loaded, return nil
+             nil)))))))
 
 (defun org-remark-highlights-clear ()
   "Delete all highlights in the buffer.

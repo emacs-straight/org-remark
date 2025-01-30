@@ -24,11 +24,15 @@ Table of Contents
   books and Info documentation with using Org mode.
 
   A user manual is available [online] or Emacs in-system as an Info node
-  `(org-remark)': (`C-h i' and find the `Org-remark' node).
+  `(org-remark)': (`C-h i' and find the `Org-remark' node) .
+
+  The user manual is also available in Japanese: [マニュアル日本語版] 🇯🇵
+  (translated by ayatajesi, GitHub user @ayatakesi) together with his
+  review with EWW, "[org-remarkでウェブページに注釈をつける]".
 
   For installation and minimum configuration, refer to [Installation]
   below or the user manual: [online] or Info node `(org-remark)
-  Installation'
+  Installation'.
 
   Getting Started in the user manual will get you started in 5 minutes:
   [online] or or Info node `(org-remark) Getting Started'.
@@ -44,6 +48,12 @@ Table of Contents
 
 
 [online] <https://nobiot.github.io/org-remark/>
+
+[マニュアル日本語版]
+<https://qiita.com/ayatakesi/items/69d43671b28bb27a9c52>
+
+[org-remarkでウェブページに注釈をつける]
+<https://qiita.com/ayatakesi/items/8986af2bf2ccca170439>
 
 [Installation] See section 3
 
@@ -81,8 +91,19 @@ Table of Contents
 
     ⁃ Info documentation
 
+    ⁃ [wallabag.el] (it has been [reported])
+
+  Refer to [NEWS] file for a list of new features and fixes.
+
 
 [nov.el] <https://depp.brause.cc/nov.el/>
+
+[wallabag.el] <https://github.com/chenyanming/wallabag.el>
+
+[reported]
+<https://github.com/nobiot/org-remark/issues/92#issuecomment-2601307855>
+
+[NEWS] <https://github.com/nobiot/org-remark/blob/main/NEWS>
 
 
 3 Installation
@@ -207,6 +228,8 @@ Table of Contents
 
   *New features*
 
+  • User option `org-remark-report-no-highlights`by Kristoffer Balintona
+    (@krisbalintona)
   • EPUB books (nov.el) support would not have been possible without
     collaboration with @sati-bodhi
   • `echo-text' update from the marginal notes to the source buffer by
@@ -215,7 +238,8 @@ Table of Contents
 
   *Bug fixes*
 
-  @alan-w-255, Nan Jun Jie (@nanjj), @sgati-bodhi
+  Joseph Turner (@josephmturner) @alan-w-255, Nan Jun Jie (@nanjj),
+  @sgati-bodhi
 
   *Documentation (including README, NEWS, CHANGELOG)*
 

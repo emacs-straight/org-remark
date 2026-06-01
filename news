@@ -1,0 +1,116 @@
+Current development version
+
+     Fixes:
+
+   - fix: When the notes = source, the title is incorrect #97
+
+Version 1.3.0 - 2025-01-28
+
+     Features:
+
+   - feat: Define `org-remark-report-no-highlights`
+     krisbalintona/chatty-no-highlights (#86) by Kristoffer Balintona
+
+   - Ability to highlight a whole line and show a mark on the margin (#71)
+
+   - Option to delete the whole notes entry when highlight is removed if
+     there is no notes body text (#21)
+
+   - `org-remark-open` to open the associated marginal notes file if
+     cursor outside a highlight (#72)
+
+     Fixes:
+
+   - fix: crash when highlighting non-org source and org-remark-use-org-id is
+          true (#95)
+
+   - fix: org-remark-info-mode interfering with isearch-forward (#93)
+
+   - fix: fix: args-out-of-range error during loading highlights (#89)
+
+   - fix: `org-remark-link` gets wrongly referenced (#83)
+
+   - fix: josephmturner/fixes (#87): typo in package description
+
+   - fix: compiler warning ‘org-remark-highlight-save’ is an obsolete...
+
+   - fix: Highlights overlay can get added to unsupported buffer (ef98c27)
+
+   - fix(highlights-delay-load): rm window-state-change-functions (#82)
+
+Version 1.2.2 - 2024-03-25
+
+  - fix: program error #78 mapconcat's 3rd arg is not optional in Emacs 28
+
+Version 1.2.1 - 2023-08-20
+
+  - fix: org-remark-icon-mode is a void symbol
+
+Version 1.2.0 - 2023-08-20
+
+  - feat(info): Org-remark supports Info
+
+          + Advice has been implemented. It is added and removed by
+            `org-remark-info-mode`.
+
+          + No suitable hook is avaialble to trigger a function after the Info node
+            is rendered. This is necessary as Info renders a new node in the same
+            buffer (in the same way as Nov.el does).
+
+  - feat: icons for additional information for highlights
+
+          + Notes exists for the highlight (*)
+
+          + The highlight position auto-adjusted (d)
+
+          + Uses the new `org-remark-highlights-after-load-functions'
+
+          + Icons are customizable. You can also disable icons by setting
+            the respective customizing variable to nil
+
+          + The default face of auto-adjusted icon is customizable with
+            face `org-remark-highlighter-warning'
+
+          + `org-remark-toggle' also toggles the icon display
+
+  - feat: nov.el support for epub books
+
+         + The link is added to the notes org file correctly pointing
+           back to epub's highlight location with using :nov link type
+           added by nov.el.l
+
+  - feat: Adjust positions after load
+
+         + This is useful especially for epubs via nov.el. Nov.el
+           renders tables on differently depending on the size of the
+           window. This causes the positions of subsequent text elements
+           to move depending on the window size when the page is
+           rendered, dislocating the positions of highlights. This
+           feature attemps to auto-correct the location on the fly. The
+           feature works generically, so Org-remark attemps to correct
+           minior edits to websites (for EWW).
+
+         + The fact that a given highlight has been automatically moved
+           is indicated by an icon
+
+  - feat: org-remark-highlights-after-load-functions
+          Abnormal hook
+
+  Fixes:
+
+  - fix: org 9.6.7 breaks org-remark-highlights-get (#70)
+
+  - fix: Make load process robust
+
+         + When error occurs during the load process, instead of
+           emitting an error, Org-remark now halts the load process and
+           returns without an error. This has been proven useful
+           especially for epub support with nov.el. Nov.el renders by
+           reusing the same buffer instead of generating a new one. When
+           error occurs during the load process (e.g. user accidentally
+           deletes some property data in the notes org buffer), the
+           error would cause nov.el to not properly render the epub
+           book. This could override the epub archive file wiht a plain
+           text file of a single file from the book, errasing the entire
+...
+...

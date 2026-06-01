@@ -18,7 +18,7 @@ Table of Contents
 ══════════════
 
   Org-remark lets you highlight and annotate text files, websites, EPUB
-  books and Info documentation with using Org mode.
+  books and Info documentation using Org mode.
 
   A user manual is available [online] or Emacs in-system as an Info node
   `(org-remark)': (`C-h i' and find the `Org-remark' node) .

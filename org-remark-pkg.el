@@ -1,2 +1,2 @@
-;; Generated package description from org-remark.el  -*- no-byte-compile: t -*-
-(define-package "org-remark" "1.3.0.0.20251214.30531" "Highlight & annotate text, Info, EPUB, EWW" '((emacs "27.1") (org "9.4")) :commit "4389853625f51ef9495ea4317979a73f942f1b00" :authors '(("Noboru Ota" . "me@nobiot.com")) :maintainer '("Noboru Ota" . "me@nobiot.com") :keywords '("org-mode" "annotation" "note-taking" "marginal-notes" "wp") :url "https://github.com/nobiot/org-remark")
+;; Generated package description from org-remark.el  -*- no-byte-compile: t; lexical-binding:t -*-
+(define-package "org-remark" "1.3.0.0.20260531.4" "Highlight & annotate text, Info, EPUB, EWW" '((emacs "27.1") (org "9.4")) :commit "6f8193c4997c734c39ccf814636c4e5d10eb42d1" :authors '(("Noboru Ota" . "me@nobiot.com")) :maintainer '("Noboru Ota" . "me@nobiot.com") :keywords '("org-mode" "annotation" "note-taking" "marginal-notes" "wp") :url "https://github.com/nobiot/org-remark")
